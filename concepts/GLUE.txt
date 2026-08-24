@@ -1,0 +1,55 @@
+GLUE (main / wiring)
+
+PROPERTY TEST:
+- Makes no business decisions. Only assembles/wires the other layers
+  together: DI, routing, config loading, framework entry points.
+
+WHY:
+- This layer is safe to leave lightly tested — but only as long as it
+  stays genuinely dumb. The moment it grows a branch on domain state,
+  it has quietly become saga or core logic wearing glue's name, and
+  needs to be tested and reasoned about as such.
+
+BELONGS HERE:
+- Dependency injection wiring — with a framework (Spring autowiring,
+  Dagger/Hilt, etc.) or by hand. Neither is required by the other
+  layers; see COMPOSITION ROOT below.
+- Routing / request dispatch.
+- Config and environment loading.
+- Framework-mandated entry points: main(), an HTTP server bootstrap,
+  an Android Activity/Service/InputMethodService registration.
+
+COMPOSITION ROOT (DI without a framework):
+- "Core/saga never imports adapters" does not require a DI framework —
+  it requires that only one place in the codebase ever references both
+  a contract and its concrete implementation together, and that place
+  is glue. Without Spring/Dagger/etc., that means constructing the
+  concrete adapter by hand in main and passing it into whatever core/
+  saga code needs it (e.g. via constructor), instead of autowiring —
+  same rule, same guarantee, no framework required.
+- This is a named pattern (Mark Seemann's "composition root"): the one
+  place in the app where every concrete type gets instantiated and
+  handed to the abstraction that needs it. A DI framework automates
+  this; doing it by hand in main is the same pattern made explicit,
+  not a workaround or a lesser version of it.
+
+MULTIPLE INSTANCES ALLOWED:
+- A platform may hand you several mandated entry points instead of one
+  main() — e.g. Android's InputMethodService plus a share-target
+  Activity. Each one stays glue as long as none of them decide
+  anything; if one starts branching on domain state, that logic
+  belongs in the saga or core layer instead, called from the entry
+  point, not inlined into it.
+
+DOES NOT BELONG HERE:
+- Any conditional that depends on domain/business state.
+- Any retry, compensation, or ordering decision (that's saga layer).
+- Any calculation or derivation (that's core layer).
+
+TESTING:
+- Smoke-level only: does the app start and wire correctly.
+- Wanting a real logic test here is a signal the code doesn't belong
+  in this layer — move it, don't just add the test.
+- Generative/property-based testing deliberately does not apply here:
+  there's no logic to generalize over. Wanting one is the same signal
+  as above — the code has stopped being glue.

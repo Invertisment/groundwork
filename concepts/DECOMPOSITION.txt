@@ -1,0 +1,109 @@
+DECOMPOSITION (too-big / split-or-continue decision)
+
+CROSS-CUTTING NOTE:
+- This is not a fifth layer, it's the decision process for whether a unit
+  of work (a function, a component) in any layer should be implemented
+  directly or split into sub-units first. It governs how an agent works
+  within FUNCTIONAL_CORE, ADAPTER_LAYER, and SAGA_COMPOSITION.
+
+TRIGGER: EMPIRICAL, NOT ESTIMATED:
+- Do not decide a unit is "too big" in advance from its description,
+  LOC, or file size (see BOUNDARIES.txt for the parallel rejection of
+  size-based judgment for module cuts — same reasoning applies here).
+- Attempt the unit directly first: author test -> author implementation
+  -> run test -> retry with the failing assertion, up to N attempts.
+  "Too big" is something the attempt reveals, not something guessed
+  before trying.
+
+THE BOUNDED LOOP (process):
+- Contract before implementation: a signature stub (a throwing
+  placeholder), a requirement description, and tests-as-spec, written
+  to disk before the real body exists, so partial builds stay coherent.
+- On failure, an architect-style call decides between two branches, not
+  an automatic split:
+  - DECOMPOSE: the unit genuinely does multiple responsibilities ->
+    split into 2-5 sibling sub-units, each with its own contract.
+  - FRESH_APPROACH: single responsibility, but the attempted
+    implementation was wrong -> give a hint from the failing
+    assertion, retry, do not split.
+  - Signal for which branch: does the failing test suite touch one
+    concern or several unrelated ones.
+- Recursion: sub-units get re-queued ahead of the parent, producer
+  before consumer, so children build first. Same pipeline handles
+  them — no separate recursive code path.
+- Termination: a depth cap (e.g. 5) plus a per-unit retry-round cap.
+  No silent "give up" — cap exhaustion is a hard failure surfaced
+  upward, not swallowed.
+- Assembly: bottom-up, test-verified. Each child goes green on its own
+  contract tests before the parent is re-authored as a thin composition
+  over them. Each branch then gets an integration test; on failure,
+  blame one culprit leaf and re-run it, rather than re-litigating
+  children that already passed.
+
+TWO FAILURE SIGNATURES — ONLY ONE OF WHICH IS OBVIOUS:
+- Signature A — stuck: the unit fails to pass its own tests after N
+  attempts. This is the original criterion above, and it's still valid
+  for units that are genuinely too hard to implement as one piece.
+- Signature B — overfitting: the unit DOES go green, but by piling up
+  branches keyed to the specific examples it was shown, instead of
+  implementing the general rule. Given a failing assertion,
+  `if input == that_exact_value: return that_exact_output` is a
+  strictly easier local move than finding the general shape, so an
+  LLM implementer under retry pressure drifts toward it unless
+  something stops it. This is train/test overfitting transplanted into
+  code generation — a fixed set of examples the implementer can see
+  and adjust against stops being a meaningful check the moment it can
+  special-case each one individually.
+- A design that only checks pass/fail (Signature A) will never catch
+  Signature B — and Signature B is the more common failure mode with
+  LLM implementers specifically. Both signatures must trigger the same
+  architect DECOMPOSE-vs-FRESH_APPROACH call.
+
+MECHANICAL DETECTORS FOR SIGNATURE B (no LLM judgment required):
+- Branch-count delta across retries. Track cyclomatic (or cognitive)
+  complexity as a trend per attempt, not a static threshold — roughly
+  one new branch per one new test passed, repeated across attempts, is
+  the tell. (A static complexity cap has the same false-positive/
+  false-negative problems as a static LOC cap; the delta across
+  retries is the actual signal, not the absolute number.)
+- Clone/near-duplicate branch detection. AST-based clone detectors
+  (e.g. PMD CPD, jscpd) catch branches whose bodies are structurally
+  identical and differ only by a substituted literal — the closest
+  syntactic fingerprint of copy-paste special-casing, and probably the
+  single strongest detector for this pattern.
+- Literal correlation with test fixtures. Parse literals used in a
+  new/changed branch condition and check for exact matches against
+  literals in the test file's inputs/expected values. A branch keyed
+  to a value that appears nowhere but one specific test's fixture is a
+  near-certain overfit tell.
+
+STRONGER FIX, NOT JUST DETECTION: GENERATIVE/PROPERTY-BASED TESTING:
+- The three detectors above catch Signature B after the fact.
+  Property-based tests remove the exploit instead: test against a
+  generated distribution of inputs ("for all valid X matching this
+  shape, property P holds") rather than an enumerable, fixed example
+  list. A hardcoded `if x == 5` branch fails the next time the
+  generator produces x=6 — no separate detector needed, the test
+  suite itself can't be gamed by enumeration.
+- Wherever a unit's requirement can be expressed as a property instead
+  of (or alongside) example cases, prefer it. See the per-layer notes
+  in FUNCTIONAL_CORE.txt and SAGA_COMPOSITION.txt for where this
+  applies most directly.
+- Where a requirement can't be reduced to a clean property, keep
+  example-based tests but pair them with the three detectors above.
+
+WHAT MECHANICAL DETECTION DOES NOT DECIDE:
+- Whether flagged branches are legitimate domain cases or accidental
+  special-casing still requires human/agent judgment — same order of
+  operations as BOUNDARIES.txt: mechanical signal detects the anomaly,
+  judgment interprets why, never the reverse.
+
+TEST-SPEC INTEGRITY REMINDER:
+- This entire scheme depends on the test/property spec being authored
+  independently of the implementation attempt — the same agent (or
+  same context) writing both the spec and the code risks correlated
+  blind spots. Generative property definitions are exactly the kind of
+  artifact worth a human read before trusting anything built against
+  them, since a wrong or too-loose property provides false confidence
+  at scale, silently, the same way a lying fake does (see
+  ADAPTER_LAYER.txt).

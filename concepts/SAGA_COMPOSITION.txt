@@ -1,0 +1,62 @@
+SAGA / TRANSACTION COMPOSITION
+
+PROPERTY TEST:
+- Coordinates two or more independently-owned mutable resources within
+  one logical operation, where no single atomic transaction can span
+  all of them.
+
+WHY:
+- This is real business logic (sequencing, retry-vs-compensate
+  decisions), not "just glue." Treating it as boilerplate is where
+  sagas actually break in practice — not in the individual steps, but
+  in someone assuming the orchestration didn't need the same rigor as
+  the core.
+
+MAY NOT EXIST:
+- Many operations are single-resource — no saga needed at all.
+- Some cross-resource operations are better solved by reconciliation
+  (an idempotent periodic sync) than by compensation, when the derived
+  state can tolerate brief staleness (e.g. a local cache of an
+  externally-owned flag).
+- Check "does this touch more than one independently-owned resource,
+  and is staleness actually unacceptable" before reaching for saga
+  machinery. If either answer is no, this layer collapses away — see
+  the single-writer / single-resource case (e.g. a game loop with one
+  piece of in-memory state, or the QR scanner app with no DB).
+
+DISTINGUISHING FROM A PLAIN CONTROLLER:
+- A saga records durable progress — what step it's on — so a crash
+  leaves a trail, not a silent void.
+- A controller that just calls two things in sequence, with no durable
+  record of intent, is NOT a saga even if it happens to touch two
+  resources. It will produce orphaned/half-done state the first time
+  the process dies mid-operation, with nothing for a human or an agent
+  to diagnose from.
+
+BELONGS HERE:
+- Do/compensate pairs per step.
+- Retry-vs-rollback decisions (prefer retrying an idempotent pending
+  step over rolling back an already-succeeded one, when possible).
+- Ordering preconditions between steps.
+- Durable intent/progress logging — even a minimal "pending" status
+  record is enough to turn silent failure into visible, recoverable
+  failure.
+
+TESTING:
+- With fakes of the underlying adapters — but only fakes that have been
+  contract-verified for parity against the real adapters (see
+  ADAPTER_LAYER.txt). Never hand-written fakes that were never checked.
+- Sequencing/compensation logic gets its own tests (e.g. "does the saga
+  correctly compensate when step 2 fails after step 1 succeeded?").
+- Property-based/generative testing is a particularly strong fit here —
+  arguably stronger than for a typical adapter. Generate the failure
+  point (which step fails), the retry count, and the ordering, then
+  assert invariants hold regardless: "no orphaned resource no matter
+  which step fails," "replaying a step twice is safe if it's declared
+  idempotent," "compensation always leaves the system in a consistent
+  state." The failure-mode space here is combinatorial (which step
+  fails x in what order x how many retries) and easy to under-enumerate
+  by hand as individual examples; a generator covers combinations a
+  human wouldn't think to write down. See DECOMPOSITION.txt for why
+  this also guards against an implementer special-casing one specific
+  failure sequence instead of handling the general case.

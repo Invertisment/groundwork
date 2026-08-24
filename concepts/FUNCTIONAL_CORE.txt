@@ -1,0 +1,53 @@
+FUNCTIONAL CORE
+
+PROPERTY TEST:
+- Same input always produces the same output.
+- No I/O, no mutation of anything outside its own return value.
+- Fully testable with plain data in, plain data out — no mocks, no environment.
+
+WHY:
+- This is the part of the system that can be exhaustively unit-tested with
+  nothing but fixture data. In a codebase too large or too fast-growing to
+  read (see RAW_MESSAGES.txt), a green test suite over pure functions is
+  the closest thing left to a trustworthy oracle.
+- Converts "I need to read a huge amount of code to trust this" into
+  "I need to trust this specific, small, deterministic function."
+
+BELONGS HERE:
+- Business rules and calculations (pay calculation, eligibility checks).
+- Parsing and validation of already-fetched data.
+- State-transition / reducer functions: reduce(state, event) -> newState.
+- Derivations/projections over a list of facts (e.g. coverageGaps(events, rules)).
+- Pure UI-state-to-tree functions (e.g. a Compose composable that only reads
+  from arguments passed in and returns a tree — no framework state reads).
+
+DOES NOT BELONG HERE:
+- Anything that reads the system clock, generates randomness, or reads
+  environment/config directly instead of receiving it as a parameter.
+- Anything that touches a DB, network, filesystem, camera, sensor, or
+  any framework/OS API.
+- Anything whose result depends on call order or prior calls (hidden state).
+
+EDGE CASES:
+- A "pure-looking" function that reads `now()` or the system timezone
+  internally is not pure — pass time/timezone in as a parameter instead.
+- UI rendering counts as core only if it is state -> tree with no reads of
+  live OS/framework state inside the function body.
+- A function that's pure but happens to be slow/expensive is still core;
+  purity is about determinism and no I/O, not about performance.
+
+TESTING:
+- Fast unit tests, plain data fixtures, no mocks, no test doubles needed.
+- Prefer property-based/generative tests over enumerated examples
+  wherever a requirement can be expressed as an invariant ("for all
+  valid X, P(X) holds") rather than a fixed input/output list — pure
+  functions are the easiest place in the whole system to do this,
+  since they take plain data and need no hidden state set up per
+  generated case. This is also the strongest defense against an
+  implementer piling up special-cased branches instead of the general
+  rule (see DECOMPOSITION.txt) — a hardcoded literal-keyed branch
+  fails the moment the generator produces an input it wasn't written
+  for.
+- Keep example-based tests alongside properties for concrete
+  regression cases (a specific bug that was fixed, a documented edge
+  case) — properties and examples are complementary, not either/or.
