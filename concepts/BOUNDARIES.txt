@@ -36,6 +36,20 @@ HOW IT'S ENFORCED (mechanical, once drawn):
   tool for whatever language the project uses) — the concrete tool
   is a per-project verification predicate, not defined in this file.
 
+LAYER SHOULD BE THE TOP-LEVEL CUT:
+- Make the layer itself the outer package/directory (`core/`, `infra/`,
+  `glue/`), with feature packages nested inside each — not a flat
+  layout of feature packages as siblings (`payments/`, `notifications/`,
+  `camera/`) that merely happen to informally belong to one layer or
+  another in a contributor's head.
+- This is what keeps the import-direction check above generic instead
+  of a growing list of hardcoded per-package rules: "nothing under
+  core/* imports from infra/* or glue/*" automatically covers every
+  package added later, under any layer, with no update to the check
+  itself. A flat layout can't be checked this way — a linter has no
+  way to know which feature package belongs to which layer unless
+  that's encoded in the path itself.
+
 HUMAN-GATED, NOT AUTOMATABLE:
 - Drawing the first boundary. An agent can tell you a boundary is
   *leaking* (mechanical signal), but not what the boundary *should
