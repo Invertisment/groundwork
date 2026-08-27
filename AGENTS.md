@@ -6,7 +6,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 - `concepts/` — six concept files, each defining one layer or cross-cutting rule by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance:
   - `FUNCTIONAL_CORE.txt` — pure, deterministic logic. No I/O, same input → same output.
-  - `ADAPTER_LAYER.txt` — anything touching the OS/network/DB/hardware. Contract-tested against both the real thing and a fake, for parity. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
+  - `INFRA_LAYER.txt` — anything touching the OS/network/DB/hardware. Contract-tested against both the real thing and a fake, for parity. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
   - `SAGA_COMPOSITION.txt` — coordinating more than one independently-owned resource. Durable progress vs. a plain controller; may not exist for single-resource operations.
   - `GLUE.txt` — dumb wiring/framework entry points only, no decisions. Composition-root pattern covers DI without a framework.
   - `BOUNDARIES.txt` — where package/module cuts go: around business invariants, never around file size. First cut is human-gated; leaks are checked mechanically afterward.
@@ -18,7 +18,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 - Never use LOC or file size as a split/complexity trigger, at any granularity (function, module, or package) — use the property tests in `DECOMPOSITION.txt` and `BOUNDARIES.txt` instead.
 - Prefer generative/property-based tests over enumerated examples wherever a requirement can be expressed as an invariant — it's the strongest defense against an implementer special-casing branches to pass the specific tests it was shown.
-- A "contract" is not necessarily a language `interface`. Pick the mechanism that fits the target language (nominal interface, structural interface, protocol/spec, or just a shared test suite where the language has no type layer) — see `ADAPTER_LAYER.txt`.
+- A "contract" is not necessarily a language `interface`. Pick the mechanism that fits the target language (nominal interface, structural interface, protocol/spec, or just a shared test suite where the language has no type layer) — see `INFRA_LAYER.txt`.
 - Draw package/module boundaries around business invariants, not around file size or current code structure; verify them afterward with mechanical import-direction and purity checks.
 - Keep the mechanical / agent-loop / human-gated split explicit per decision: import-direction and purity checks are mechanical; the too-big decompose loop is agent-native; the first boundary cut and the test-spec's faithfulness to the actual requirement stay human-gated.
 - Never fully vibe the test harness itself — every other layer's correctness claim only holds if the harness verifying it is honest.

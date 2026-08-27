@@ -1,4 +1,4 @@
-ADAPTER LAYER (mutable ops)
+INFRA LAYER (mutable ops)
 
 PROPERTY TEST:
 - Touches something whose behavior you don't fully control at runtime:
@@ -17,16 +17,16 @@ BELONGS HERE:
 - HTTP / external API calls.
 - Camera, sensor, and other hardware access.
 - Runtime permission requests (these are async and revocable — treat a
-  denial the same as any other adapter failure mode, not a special case).
+  denial the same as any other infra failure mode, not a special case).
 - Android intents, IME/InputConnection calls, share-sheet interactions.
 - File I/O, system clock reads, random generation.
 
 CONTRACT REQUIREMENT:
-- Each adapter operation should declare (even informally, e.g. a comment
+- Each infra operation should declare (even informally, e.g. a comment
   or annotation) whether it's idempotent, what its failure modes are, and
   what — if anything — undoes it (a compensating action).
 - This metadata is what the saga/composition layer consumes; without it,
-  glue code has to go read adapter internals to know how to sequence
+  glue code has to go read infra internals to know how to sequence
   things safely.
 
 CONTRACT IS NOT THE SAME THING AS "INTERFACE":
@@ -66,21 +66,21 @@ CONTRACT IS NOT THE SAME THING AS "INTERFACE":
 TESTING:
 - Contract tests against the real thing where feasible (a real test DB,
   an emulator/instrumented test for OS APIs) — not just a smoke test.
-- If a fake of this adapter is used elsewhere (saga-layer tests), the
-  same contract-test suite must be run against both the real adapter and
+- If a fake of this infra is used elsewhere (saga-layer tests), the
+  same contract-test suite must be run against both the real infra and
   the fake, to guarantee they never silently diverge. A fake that lies is
   the single biggest risk in this whole design — everything downstream
   stays green while the real thing breaks in production.
 
 EDGE CASES:
 - Android lifecycle-forced state loss (rotation, low-memory process
-  kill) is an adapter concern, not a bug in your logic — anything not
+  kill) is an infra concern, not a bug in your logic — anything not
   durably saved before the process can die is effectively at risk here.
 
 GENERATIVE TESTING (where it applies here):
-- Most adapter behavior is contract-tested against the real system, not
+- Most infra behavior is contract-tested against the real system, not
   a good fit for property-based generation. The exception is any
-  adapter with a clean round-trip property — encode/decode, serialize/
+  infra with a clean round-trip property — encode/decode, serialize/
   deserialize, parse/format (e.g. a QR encoder/decoder: for all valid
   text, decode(encode(text)) == text). Where that shape exists, a
   property test is a strong supplement to the real-system contract

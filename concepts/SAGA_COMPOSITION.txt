@@ -43,13 +43,13 @@ BELONGS HERE:
   failure.
 
 TESTING:
-- With fakes of the underlying adapters — but only fakes that have been
-  contract-verified for parity against the real adapters (see
-  ADAPTER_LAYER.txt). Never hand-written fakes that were never checked.
+- With fakes of the underlying infra — but only fakes that have been
+  contract-verified for parity against the real infra (see
+  INFRA_LAYER.txt). Never hand-written fakes that were never checked.
 - Sequencing/compensation logic gets its own tests (e.g. "does the saga
   correctly compensate when step 2 fails after step 1 succeeded?").
 - Property-based/generative testing is a particularly strong fit here —
-  arguably stronger than for a typical adapter. Generate the failure
+  arguably stronger than for typical infra. Generate the failure
   point (which step fails), the retry count, and the ordering, then
   assert invariants hold regardless: "no orphaned resource no matter
   which step fails," "replaying a step twice is safe if it's declared

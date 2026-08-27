@@ -4,7 +4,7 @@ CROSS-CUTTING NOTE:
 - This is not a fifth layer, it's the decision process for whether a unit
   of work (a function, a component) in any layer should be implemented
   directly or split into sub-units first. It governs how an agent works
-  within FUNCTIONAL_CORE, ADAPTER_LAYER, and SAGA_COMPOSITION.
+  within FUNCTIONAL_CORE, INFRA_LAYER, and SAGA_COMPOSITION.
 
 TRIGGER: EMPIRICAL, NOT ESTIMATED:
 - Do not decide a unit is "too big" in advance from its description,
@@ -106,4 +106,4 @@ TEST-SPEC INTEGRITY REMINDER:
   artifact worth a human read before trusting anything built against
   them, since a wrong or too-loose property provides false confidence
   at scale, silently, the same way a lying fake does (see
-  ADAPTER_LAYER.txt).
+  INFRA_LAYER.txt).

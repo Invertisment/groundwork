@@ -3,7 +3,7 @@ BOUNDARIES (package/module cuts)
 CROSS-CUTTING NOTE:
 - This concept doesn't name a fifth layer — it's about where the seams
   go *within and between* the four layers (FUNCTIONAL_CORE,
-  ADAPTER_LAYER, SAGA_COMPOSITION, GLUE). Each of those layers still
+  INFRA_LAYER, SAGA_COMPOSITION, GLUE). Each of those layers still
   needs to be cut into modules/packages, and this file is about how.
 
 PROPERTY TEST:
@@ -27,7 +27,7 @@ WHY:
 
 HOW IT'S ENFORCED (mechanical, once drawn):
 - Dependency-direction / import-direction checks: core cannot import
-  adapter or saga packages; adapters cannot import saga internals;
+  infra or saga packages; infra cannot import saga internals;
   glue can import everything.
 - Purity checks on the core: ban imports of DB drivers, HTTP clients,
   filesystem, clock, random, and framework types from core packages.

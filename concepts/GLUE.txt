@@ -20,11 +20,11 @@ BELONGS HERE:
   an Android Activity/Service/InputMethodService registration.
 
 COMPOSITION ROOT (DI without a framework):
-- "Core/saga never imports adapters" does not require a DI framework —
+- "Core/saga never imports infra" does not require a DI framework —
   it requires that only one place in the codebase ever references both
   a contract and its concrete implementation together, and that place
   is glue. Without Spring/Dagger/etc., that means constructing the
-  concrete adapter by hand in main and passing it into whatever core/
+  concrete infra by hand in main and passing it into whatever core/
   saga code needs it (e.g. via constructor), instead of autowiring —
   same rule, same guarantee, no framework required.
 - This is a named pattern (Mark Seemann's "composition root"): the one
