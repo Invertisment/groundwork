@@ -46,6 +46,21 @@ DOES NOT BELONG HERE:
 - Any retry, compensation, or ordering decision (that's saga layer).
 - Any calculation or derivation (that's core layer).
 
+PROPORTIONALITY (not literally zero conditionals):
+- "No business decisions" doesn't mean zero conditionals of any kind.
+  A single boolean wired straight to one UI affordance — a popup is
+  open or closed, a button's label reflects which — is still glue,
+  even though it's technically an if/else.
+- The line is domain/business state versus presentation state local to
+  the entry point itself. "Is this popup currently open" is
+  presentation state; "does this user have permission to do X" or "is
+  this order past its cancellation window" is a decision, even if it's
+  a single line to check.
+- Signal it's crossed the line: the conditional would need testing
+  independent of the framework/UI to trust it, or it depends on data
+  the entry point had to go fetch/decide rather than just its own
+  current display state.
+
 TESTING:
 - Smoke-level only: does the app start and wire correctly.
 - Wanting a real logic test here is a signal the code doesn't belong
