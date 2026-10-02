@@ -2,15 +2,15 @@ INFRA LAYER (mutable ops)
 
 PROPERTY TEST:
 - Touches something whose behavior you don't fully control at runtime:
-  OS, network, DB, filesystem, clock, random, a hardware sensor, or a
-  framework's async permission grant.
+  OS, network, DB, filesystem, clock, random, a hardware sensor, external
+  APIs or a framework's async permission grant.
 
 WHY:
 - This layer looks boring but isn't — query construction, mapping,
   upsert semantics, pagination, scoping, permission state, retry
   behavior are exactly where subtle silent-wrong-data bugs live. They
-  don't crash, they corrupt or leak data weeks later. This is the
-  highest-risk layer to under-test, not the lowest.
+  don't crash, they corrupt or leak data weeks later. Worth checking
+  wherever a check is cheap — but see TESTING for why it isn't forced.
 
 BELONGS HERE:
 - DB queries / CRUD operations.
@@ -64,8 +64,19 @@ CONTRACT IS NOT THE SAME THING AS "INTERFACE":
   without also being the real thing.
 
 TESTING:
-- Contract tests against the real thing where feasible (a real test DB,
-  an emulator/instrumented test for OS APIs) — not just a smoke test.
+- Not forced. Whether the real thing is up, reachable, or behaves on a
+  given device is normally found out in production, not in CI — the
+  same way nobody tests whether a third-party API is down. Hardware
+  that can't run headless (camera, sensors) is the typical case where
+  tests cost more than they catch.
+- Where it's cheap, contract tests against the real fast ephemeral DB are
+  worth having — not just a smoke test. Even if ephemeral DBs are fast,
+  this approach has diminishing returns if the same query is tested for
+  each possible input — this means we don't need to test all possible
+  queries, but mostly indices and constraints.
+- Emulators are not good targets for this testing as they are interactive
+  and need GUI to operate on them properly. This is e2e or UI testing if UI
+  is involved.
 - If a fake of this infra is used elsewhere (saga-layer tests), the
   same contract-test suite must be run against both the real infra and
   the fake, to guarantee they never silently diverge. A fake that lies is
@@ -77,12 +88,3 @@ EDGE CASES:
   kill) is an infra concern, not a bug in your logic — anything not
   durably saved before the process can die is effectively at risk here.
 
-GENERATIVE TESTING (where it applies here):
-- Most infra behavior is contract-tested against the real system, not
-  a good fit for property-based generation. The exception is any
-  infra with a clean round-trip property — encode/decode, serialize/
-  deserialize, parse/format (e.g. a QR encoder/decoder: for all valid
-  text, decode(encode(text)) == text). Where that shape exists, a
-  property test is a strong supplement to the real-system contract
-  test, and for the same reason as elsewhere (see DECOMPOSITION.txt):
-  it can't be satisfied by hardcoding a few literal cases.
