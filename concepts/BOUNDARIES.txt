@@ -36,19 +36,40 @@ HOW IT'S ENFORCED (mechanical, once drawn):
   tool for whatever language the project uses) — the concrete tool
   is a per-project verification predicate, not defined in this file.
 
-LAYER SHOULD BE THE TOP-LEVEL CUT:
-- Make the layer itself the outer package/directory (`core/`, `infra/`,
-  `glue/`), with feature packages nested inside each — not a flat
-  layout of feature packages as siblings (`payments/`, `notifications/`,
-  `camera/`) that merely happen to informally belong to one layer or
-  another in a contributor's head.
-- This is what keeps the import-direction check above generic instead
-  of a growing list of hardcoded per-package rules: "nothing under
-  core/* imports from infra/* or glue/*" automatically covers every
-  package added later, under any layer, with no update to the check
-  itself. A flat layout can't be checked this way — a linter has no
-  way to know which feature package belongs to which layer unless
-  that's encoded in the path itself.
+LAYER SHOULD BE THE BOTTOM-LEVEL CUT:
+- Keep the upper package structure normal for the language/ecosystem —
+  components/features as the project would naturally package them
+  (`payments/`, `notifications/`, `camera/`, nested as deep as needed).
+  The layer is the innermost directory that holds source files:
+  `src/payments/ledger/core/`, `src/payments/ledger/infra/`,
+  `src/payments/ledger/glue/` (plus `saga/` where that layer exists).
+- Not layer-first (`src/core/payments/`, `src/infra/payments/`): that
+  scatters one component — and the business invariant it protects —
+  across several distant trees, working against the invariant-based
+  cut above. Bottom-level layers keep a component's core, infra and
+  glue next to each other while still making each file's layer
+  explicit.
+- Not a flat layout with no layer directories at all: a linter has no
+  way to know which layer a file belongs to unless that's encoded in
+  the path itself.
+- The import-direction check stays generic by matching the layer
+  segment of the path rather than a fixed prefix: "nothing under
+  `**/core/**` imports from `**/infra/**` or `**/glue/**`" covers
+  every component added later, in any component, with no update to the
+  check itself. The same rule holds across components (`a/core` may
+  not import `b/infra` either).
+- Required companion checks, since the path is now the only thing
+  declaring a file's layer:
+  - Every source file sits under exactly one layer directory; a source
+    file outside any layer directory fails CI.
+  - Layer directory names are reserved — no nesting one layer inside
+    another (`core/infra/`), and no component may reuse a layer name
+    for something else.
+- This makes the lint more involved than a single prefix rule. That's
+  an accepted cost: it's still a mechanical predicate, and generating
+  it per project (in whatever import-linter/dependency-graph tool the
+  language has) is exactly the kind of check an agent can write and a
+  human can verify once.
 
 HUMAN-GATED, NOT AUTOMATABLE:
 - Drawing the first boundary. An agent can tell you a boundary is
