@@ -43,7 +43,13 @@ MULTIPLE INSTANCES ALLOWED:
 
 DOES NOT BELONG HERE:
 - Any conditional that depends on domain/business state.
-- Any retry, compensation, or ordering decision (that's saga layer).
+- Any compensation, or any retry/ordering decision across
+  independently-owned resources (that's saga layer).
+- Exception: where the saga layer collapses away (see "MAY NOT EXIST"
+  in SAGA_COMPOSITION.txt), plain retry/ordering of calls may sit here
+  instead of in infra — as long as it doesn't branch on domain state.
+  Once it does, or once a second resource joins the operation, it has
+  outgrown glue.
 - Any calculation or derivation (that's core layer).
 
 PROPORTIONALITY (not literally zero conditionals):

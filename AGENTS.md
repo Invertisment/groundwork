@@ -6,7 +6,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 - `concepts/` — six concept files, each defining one layer or cross-cutting rule by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance:
   - `FUNCTIONAL_CORE.txt` — pure, deterministic logic. No I/O, same input → same output.
-  - `INFRA_LAYER.txt` — anything touching the OS/network/DB/hardware. Tests are optional (outages and device quirks surface in production), but any fake must pass the same contract suite as the real thing. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
+  - `INFRA_LAYER.txt` — anything touching the OS/network/DB/hardware. Kept thin: anything testable without the real thing moves to core or saga. Tests are optional (outages and device quirks surface in production), but any fake must pass the same contract suite as the real thing. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
   - `SAGA_COMPOSITION.txt` — coordinating more than one independently-owned resource. Durable progress vs. a plain controller; may not exist for single-resource operations.
   - `GLUE.txt` — dumb wiring/framework entry points only, no decisions. Composition-root pattern covers DI without a framework.
   - `BOUNDARIES.txt` — where package/module cuts go: around business invariants, never around file size. First cut is human-gated; leaks are checked mechanically afterward.

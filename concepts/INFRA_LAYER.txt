@@ -63,6 +63,35 @@ CONTRACT IS NOT THE SAME THING AS "INTERFACE":
   of any single implementation, so a fake can be verified against it
   without also being the real thing.
 
+KEEP IT THIN (humble object):
+- Anything in an infra operation that could be tested without the real
+  thing doesn't belong in infra: mapping/parsing of fetched data and
+  derivations go to FUNCTIONAL_CORE, retry/ordering decisions go to
+  SAGA_COMPOSITION — or to GLUE when the project has no saga layer
+  (see GLUE.txt). What stays is the I/O call plus the minimum
+  translation into and out of it. Since infra tests aren't forced (see
+  TESTING), logic left here is the logic most likely to never be tested.
+- The measure is logic that needs testing, not lines of code. A small
+  conditional that swaps part of a query (an optional filter, a sort
+  direction) is fine. Conditionals inside the query itself (CASE/WHEN,
+  COALESCE and the like) are the real thing's semantics, not
+  application logic — they're covered by a real-thing contract test if
+  one exists, not unit-tested on their own.
+- Inputs are plain values and typed values (ids, value objects). Core
+  may also hand infra a plain-data description of what it wants
+  (filters, sort, page) for infra to translate into query text — that
+  translation is the visible sign some logic is needed here, and it has
+  to stay thin.
+- Avoid query fragments built by infra code but assembled in glue and
+  passed back into infra. That splits one query's correctness across
+  two layers, and makes glue compose query logic — a decision glue
+  isn't allowed to make (see GLUE.txt) and infra's contract can't see.
+  Prefer a named infra operation that takes data; glue only wires it.
+- Judgment, not a mechanical gate: a static complexity cap on infra
+  functions has the same problems as a LOC cap (see DECOMPOSITION.txt).
+  The review question is "does this branch decide something about the
+  data it received, and could it live in core instead?"
+
 TESTING:
 - Not forced. Whether the real thing is up, reachable, or behaves on a
   given device is normally found out in production, not in CI — the
