@@ -1,6 +1,9 @@
 SAGA / TRANSACTION COMPOSITION
 
 PROPERTY TEST:
+- A saga exists exactly when a crash between steps would lose or
+  orphan something. Its job is to make that loss visible and
+  recoverable.
 - Coordinates two or more independently-owned mutable resources within
   one logical operation, where no single atomic transaction can span
   all of them.

@@ -1,0 +1,121 @@
+VERIFICATION (which kind of check to put a requirement behind)
+
+CROSS-CUTTING NOTE:
+- This is not a layer. It ranks the kinds of checks the other files
+  rely on (types, import/purity rules, property tests, example tests,
+  review) so each requirement gets put behind the strongest check
+  that can actually express it.
+
+WHY:
+- An agent produces code faster than a human can read it, and its own
+  claims about that code ("the core stays pure") are not evidence.
+  Every requirement moved from review into a mechanical check is one
+  nobody has to re-verify by eye on every diff.
+- Mechanical checks also feed back inside the agent loop: a specific,
+  deterministic failure is the most actionable signal an agent gets,
+  and it doesn't dilute as context grows the way a prompt rule does.
+
+STRENGTH (strongest -> weakest):
+- "Strength" means how reliably a passing check implies the property
+  holds — not how many kinds of bug it can see. Review sees the most
+  kinds and guarantees the least.
+1. Types that make illegal states unrepresentable. Wrong code doesn't
+   compile; holds for every value on every path, not for sampled
+   inputs. Limit: only invariants the type system can express.
+2. Import-direction and purity rules (see BOUNDARIES.txt). Every file,
+   every change. Structural only: proves the core can't do I/O, says
+   nothing about whether it computes the right thing.
+3. Property tests. Behavior over a generated distribution of inputs;
+   can't be passed by special-casing examples (see DECOMPOSITION.txt).
+   Limit: sampled, not proven, and only as good as the property — a
+   too-loose property passes wrong code.
+4. Example tests. Behavior at the specific points shown; an
+   implementer that can see them can special-case each one.
+5. Review. The only check of meaning and spec faithfulness, but not
+   repeatable, drifts with attention, and doesn't scale with agent
+   output.
+
+VALUE FOR EFFORT — HUMAN (best -> worst):
+- Effort here is human attention: reading a check closely enough to
+  trust it's honest, once or on every change. An agent writes all of
+  these; the human only has to read them.
+1. Import/purity rules. A few lines of config read once, then they
+   guard every file and every component added later.
+2. Types. A type definition is short to read and holds on every path.
+   Reading it well needs domain knowledge, the same kind the first
+   boundary cut does (see BOUNDARIES.txt).
+3. Property tests. Short, but the highest-stakes read: a too-loose
+   property or a generator that misses valid inputs gives false
+   confidence at scale. Worth the attention because this is where a
+   human read can't be replaced.
+4. Example tests. Each is easy to read, but there are many and each
+   covers one point, so knowing what's covered means reading them all.
+5. Review. All of the effort, again on every diff, growing with agent
+   output.
+
+VALUE FOR EFFORT — MACHINE (best -> worst):
+- Effort here is what an agent spends writing the check and getting it
+  to pass; value is how good the check is as feedback inside its loop
+  — fast, deterministic, pointing at the exact cause — and how much a
+  pass can be trusted.
+1. Import/purity rules. Generated once from BOUNDARIES.txt; failures
+   are instant and name the offending import.
+2. Types. Compiler errors are the fastest, most precise feedback an
+   agent gets. The cost is modeling the domain up front, and the
+   temptation to cast past an error instead of fixing it.
+3. Property tests. Finding the invariant is the hard part; once found,
+   a shrunk counterexample is precise feedback. Pin the seed and keep
+   failing cases as examples so a rerun is reproducible.
+4. Example tests. Trivial to write, precise failures — but they invite
+   special-casing (see DECOMPOSITION.txt), so the green they produce
+   is worth the least of any test.
+5. Review (an LLM reviewing LLM code). Cheap to run, but not evidence:
+   correlated blind spots, nondeterministic, nothing to fail CI on.
+
+TYPE TIER AVAILABILITY:
+- In languages without a static type layer (plain JS, Python without a
+  type checker, Clojure) tier 1 doesn't exist. The nearest substitute
+  is a runtime schema/spec, which checks like a property test, not
+  like a type.
+
+READING THE LISTS TOGETHER:
+- Weighed against value, effort barely reorders anything: both value
+  lists end up close to the strength list. Strong checks are worth
+  what they cost.
+- The one consistent swap is import/purity rules above types: nearly
+  as strong, far cheaper for both human and machine. That's why every
+  project generated from this guideline gets them, not just the ones
+  that find time.
+- The lists diverge at the bottom: review costs the human everything,
+  and gives the machine nothing worth trusting. Example tests are
+  cheap for the machine but expensive for a human to read for
+  coverage.
+- Human attention is the binding constraint, not agent effort. Put
+  each requirement as high on the strength list as the language and
+  the requirement allow, and drop a tier only when the higher one
+  can't express it — never because the higher one is more work for the
+  agent.
+- Review stays as the catch-all for what no mechanical check can
+  express, above all whether the spec matches the actual requirement
+  (human-gated, see DECOMPOSITION.txt TEST-SPEC INTEGRITY).
+
+ESCAPE HATCHES:
+- Every tier has a cheap bypass, and an agent blocked by a check takes
+  the cheapest way past it:
+  - types: `any`, unchecked casts, `unsafe`, `@ts-ignore`,
+    `# type: ignore`.
+  - import/purity/lint rules: suppression comments (`# noqa`,
+    `eslint-disable`), or moving code to a path the rule doesn't scan
+    (closed by BOUNDARIES.txt's "every source file sits under exactly
+    one layer directory").
+  - tests: skipping or deleting a test, loosening a property, editing
+    the expected value instead of the code.
+- A check is only as strong as its least-guarded bypass. Guard them
+  mechanically:
+  - Ban suppressions in CI, or allow them only with an inline reason
+    and count them, so a rising count is visible.
+  - Flag changes that touch a test and the code under test together,
+    so the test diff gets read on its own rather than as part of the
+    fix.
+- Same order as everywhere else in this guideline: the mechanical
+  signal finds the bypass, judgment decides whether it was legitimate.

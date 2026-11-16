@@ -4,13 +4,14 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 ## What's here
 
-- `concepts/` — six concept files, each defining one layer or cross-cutting rule by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance:
+- `concepts/` — seven concept files, each defining one layer or cross-cutting rule by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance:
   - `FUNCTIONAL_CORE.txt` — pure, deterministic logic. No I/O, same input → same output.
   - `INFRA_LAYER.txt` — anything touching the OS/network/DB/hardware. Kept thin: anything testable without the real thing moves to core or saga. Tests are optional (outages and device quirks surface in production), but any fake must pass the same contract suite as the real thing. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
   - `SAGA_COMPOSITION.txt` — coordinating more than one independently-owned resource. Durable progress vs. a plain controller; may not exist for single-resource operations.
   - `GLUE.txt` — dumb wiring/framework entry points only, no decisions. Composition-root pattern covers DI without a framework.
   - `BOUNDARIES.txt` — where package/module cuts go: around business invariants, never around file size. First cut is human-gated; leaks are checked mechanically afterward.
   - `DECOMPOSITION.txt` — when to split a unit instead of implementing it directly. Empirical, not estimated up front. Two failure signatures trigger a split — stuck (fails after N attempts) and overfitting (passes by piling up branches special-cased to the given tests) — not pass/fail alone.
+  - `VERIFICATION.txt` — ranks checks by strength (types > import/purity rules > property tests > example tests > review), and separately by value for human effort and for machine effort (both put import/purity rules first; human attention is the binding constraint). Put each requirement behind the strongest check that can express it, and guard every check's escape hatch (suppressions, casts, skipped or loosened tests).
 - `RAW_MESSAGES.txt` — the original raw conversation this guideline was distilled from. Historical source material, not authoritative: if it ever conflicts with `concepts/`, `concepts/` wins.
 - `README.md` — one-paragraph orientation for humans.
 
@@ -21,6 +22,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 - A "contract" is not necessarily a language `interface`. Pick the mechanism that fits the target language (nominal interface, structural interface, protocol/spec, or just a shared test suite where the language has no type layer) — see `INFRA_LAYER.txt`.
 - Draw package/module boundaries around business invariants, not around file size or current code structure; verify them afterward with mechanical import-direction and purity checks.
 - Keep the mechanical / agent-loop / human-gated split explicit per decision: import-direction and purity checks are mechanical; the too-big decompose loop is agent-native; the first boundary cut and the test-spec's faithfulness to the actual requirement stay human-gated.
+- Put each requirement behind the strongest check that can express it (see `VERIFICATION.txt`), and mechanically guard the bypasses: suppression comments, unchecked casts, skipped or loosened tests.
 - Never fully vibe the test harness itself — every other layer's correctness claim only holds if the harness verifying it is honest.
 - Every project generated from this guideline has a `GROUNDWORK.md` in its root: a tiny file, short bullets only, recording which guideline commit was applied, the design choices made where the guideline is silent or ambiguous (with a one-line reason each), deliberate deviations from the current guideline, and known gaps. Update it whenever such a decision changes. The project's human README must mention that `GROUNDWORK.md` exists in one line. [Invertisment/qr-tools](https://github.com/Invertisment/qr-tools)'s is the worked example.
 - Keep the project's own README condensed regardless of project size — a bigger project earns more docs elsewhere (`docs/`, code comments, ADRs), not a longer README. Front-load the single most orienting fact in the first line or two, list contents/instructions as short bullets rather than prose, and stay skimmable in one pass: a human should be oriented before they'd stop reading. This repo's own README and [Invertisment/qr-tools](https://github.com/Invertisment/qr-tools)'s are the two worked examples.
