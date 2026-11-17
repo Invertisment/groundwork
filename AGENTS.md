@@ -5,7 +5,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 ## What's here
 
 - `concepts/` — seven concept files, each defining one layer or cross-cutting rule by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance:
-  - `FUNCTIONAL_CORE.txt` — pure, deterministic logic. No I/O, same input → same output.
+  - `FUNCTIONAL_CORE.txt` — pure, deterministic logic. No I/O, same input → same output. Reference data comes in as a parameter, so tests can own their inputs.
   - `INFRA_LAYER.txt` — anything touching the OS/network/DB/hardware. Kept thin: anything testable without the real thing moves to core or saga. Tests are optional (outages and device quirks surface in production), but any fake must pass the same contract suite as the real thing. A "contract" is not the same thing as a language `interface` — the mechanism is language-dependent.
   - `SAGA_COMPOSITION.txt` — coordinating more than one independently-owned resource. Durable progress vs. a plain controller; may not exist for single-resource operations.
   - `GLUE.txt` — dumb wiring/framework entry points only, no decisions. Composition-root pattern covers DI without a framework. UI state with a rule across several fields changes only through pure transitions in core (a reducer, sealed events, or plain functions on an immutable value); glue handlers just call one.
@@ -17,13 +17,9 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 ## Rules to carry into any project generated from this guideline
 
-- Never use LOC or file size as a split/complexity trigger, at any granularity (function, module, or package) — use the property tests in `DECOMPOSITION.txt` and `BOUNDARIES.txt` instead.
-- Prefer generative/property-based tests over enumerated examples wherever a requirement can be expressed as an invariant — it's the strongest defense against an implementer special-casing branches to pass the specific tests it was shown.
-- A "contract" is not necessarily a language `interface`. Pick the mechanism that fits the target language (nominal interface, structural interface, protocol/spec, or just a shared test suite where the language has no type layer) — see `INFRA_LAYER.txt`.
-- Draw package/module boundaries around business invariants, not around file size or current code structure; verify them afterward with mechanical import-direction and purity checks.
+Everything in `concepts/` carries over; the summaries above point to each file. These are the rules no concept file states:
+
 - Keep the mechanical / agent-loop / human-gated split explicit per decision: import-direction and purity checks are mechanical; the too-big decompose loop is agent-native; the first boundary cut and the test-spec's faithfulness to the actual requirement stay human-gated.
-- Put each requirement behind the strongest check that can express it (see `VERIFICATION.txt`), and mechanically guard the bypasses: suppression comments, unchecked casts, skipped or loosened tests.
-- Check agent-written tests by mutation before trusting them: break the code under test on purpose and confirm a test fails. Aim it at core/saga logic.
 - Never fully vibe the test harness itself — every other layer's correctness claim only holds if the harness verifying it is honest.
 - Every project generated from this guideline has a `GROUNDWORK.md` in its root: a tiny file, short bullets only, recording which guideline commit was applied, the design choices made where the guideline is silent or ambiguous (with a one-line reason each), deliberate deviations from the current guideline, and known gaps. Update it whenever such a decision changes. The project's human README must mention that `GROUNDWORK.md` exists in one line. [Invertisment/qr-tools](https://github.com/Invertisment/qr-tools)'s is the worked example.
 - Every generated project also has a thin `AGENTS.md` in its root, the entry point agent tools load on their own (README and `GROUNDWORK.md` aren't). It holds only: read `GROUNDWORK.md` first; the one command that runs every check; the rules no mechanical check enforces (glue handlers only call one core transition, new logic goes to core with property tests, agent-written tests are checked by mutation); and that a decision that changes or deviates from the guideline gets a `GROUNDWORK.md` bullet. A pointer, not a copy: repeating `GROUNDWORK.md` or the concepts there lets them drift apart. Tools that read another file name get a one-line pointer to it (e.g. a `CLAUDE.md` containing `@AGENTS.md`).

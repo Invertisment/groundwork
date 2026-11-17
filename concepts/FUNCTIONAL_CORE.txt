@@ -35,6 +35,13 @@ EDGE CASES:
   live OS/framework state inside the function body.
 - A function that's pure but happens to be slow/expensive is still core;
   purity is about determinism and no I/O, not about performance.
+- A function that imports a built-in data table (a product catalog,
+  a rate table, a config constant) is pure, but it's bound to that one
+  table: no test can give it any other input. Pass the data in as a
+  parameter like any other config; glue (the composition root) binds
+  the real table. The same goes for types derived from the data (an id
+  type built from the table's keys): logic typed by them only accepts
+  the real data, so it validates ids against the table it was given.
 
 TESTING:
 - Fast unit tests, plain data fixtures, no mocks, no test doubles needed.
@@ -59,3 +66,25 @@ TESTING:
 - Keep example-based tests alongside properties for concrete
   regression cases (a specific bug that was fixed, a documented edge
   case) — properties and examples are complementary, not either/or.
+- Logic tests own their inputs: a small fixture written in the test, or
+  a generated one. A test that loads shared data (the real catalog,
+  config, seed data) silently changes what it checks when that data
+  drifts: it still passes, but on other cases, and the coverage it
+  lost shows up nowhere. Restating the data in the test is no fix
+  either: it breaks on every correct data edit and gets updated by
+  habit.
+- Real data belongs in two kinds of test only, neither of which drifts
+  silently:
+  - invariants of the data itself (well-formed, no duplicate ids,
+    every reference resolves): the data is what's under test, so a
+    data change is exactly what they should look at;
+  - a few named scenario tests: real data in, exact reviewed results
+    out. They're meant to fail when the data changes in a way that
+    matters to them, and get re-reviewed when they do.
+  Never a weak assertion over real data ("every result fits"): that's
+  the kind that drifts silently.
+- Make it mechanical with an import rule (see BOUNDARIES.txt): real
+  data modules may be imported only by glue and by data/scenario test
+  files (marked by name, e.g. *.data.test.*). A core module importing
+  one fails the check, which is what forces the data in as a
+  parameter above.
