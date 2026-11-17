@@ -67,10 +67,76 @@ PROPORTIONALITY (not literally zero conditionals):
   the entry point had to go fetch/decide rather than just its own
   current display state.
 
+UI STATE WITH A RULE ACROSS FIELDS (transitions in core):
+- A UI framework keeps state in its own containers (React hooks,
+  Compose state, an Android ViewModel's StateFlow), so that state is
+  held by glue. What changes it doesn't have to be.
+- Trigger: the state has a rule spanning several fields — e.g. free
+  seats plus assigned seats must add up to the venue's capacity, so
+  assigning one moves it from one field to another. A single field
+  wired to one affordance (see PROPORTIONALITY) stays plain glue, and
+  so does presentation-only state (paging, an open popup, a scroll
+  position).
+- Once triggered: the state is a plain immutable value, and every
+  change to it is a pure function in core, (state, input) -> newState
+  (see FUNCTIONAL_CORE.txt). Glue holds the current value in the
+  framework's container and replaces it with what a transition
+  returns; each handler calls one transition and branches on nothing.
+- Why this shape: "no business decisions" has no mechanical check, so
+  logic in glue survives on review alone and grows there untested
+  (event handlers are the path of least resistance in most UI
+  frameworks). "Each handler calls one transition" is checkable at a
+  glance, and the logic it moves out becomes reachable by property
+  tests.
+- A transition that doesn't apply to the current state (an id that's
+  gone, a value out of range, an option that no longer exists) doesn't
+  throw: it returns the state unchanged together with why, as a value
+  — [state, rejection], a Result/Either, a sealed outcome type. The
+  rejection is a closed set of reasons, not a message string.
+  - Glue can then react (show a notice, shake a field), and mapping a
+    reason to text is presentation, so it stays glue. Glue still
+    doesn't decide whether the change was allowed; it only reports the
+    answer core gave.
+  - Not throwing matters because UI input races with state changes,
+    and it keeps the invariants holding for any sequence of
+    transitions — which is what the tests generate. It also gives
+    them one more cheap property: a rejected transition returns
+    exactly the state it was given.
+- Cost: more indirection than an inline handler, and one state type
+  can grow to know everything. Split it along invariants (see
+  BOUNDARIES.txt), never by size.
+
+TRANSITIONS ARE NOT THE SAME THING AS "REDUCER":
+- The property is "pure function in core, the only way the state
+  changes". How the set of transitions is spelled is per language and
+  framework:
+  - Plain functions or methods on an immutable value:
+    `state.assign(seat, guest)` returning a new state (a Kotlin data
+    class with `copy`, a Java record, a Go struct passed by value). No
+    event type at all; this is enough.
+  - A closed set of inputs plus one function over it: a sealed
+    interface of event cases and an exhaustive `when` (Kotlin; Android
+    MVI), sealed interfaces with records and a `switch` (Java 17+), a
+    tagged union and a `switch` (TypeScript; Redux or React's
+    useReducer), a custom type and `update` (Elm), re-frame events
+    (Clojure). A plain enum works only while no case carries data —
+    "assign this seat" does, so it needs sealed cases, not enum
+    constants.
+- What the closed set buys: the compiler checks every case is handled
+  (exhaustive `when`/`switch`), and the transitions become data a
+  generator can draw from and a log or a test can replay. Worth it
+  once there are more than a few transitions; not required by the
+  property.
+- Where the platform can drop the state (Android process death, a page
+  reload), a plain immutable value is also what's easiest to save and
+  restore — the saving itself is infra (see INFRA_LAYER.txt EDGE
+  CASES).
+
 TESTING:
 - Smoke-level only: does the app start and wire correctly.
 - Wanting a real logic test here is a signal the code doesn't belong
-  in this layer — move it, don't just add the test.
+  in this layer — move it, don't just add the test. For UI state, the
+  usual destination is a transition in core (see above).
 - Generative/property-based testing deliberately does not apply here:
   there's no logic to generalize over. Wanting one is the same signal
   as above — the code has stopped being glue.

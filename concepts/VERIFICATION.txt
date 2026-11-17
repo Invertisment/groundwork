@@ -99,6 +99,29 @@ READING THE LISTS TOGETHER:
   express, above all whether the spec matches the actual requirement
   (human-gated, see DECOMPOSITION.txt TEST-SPEC INTEGRITY).
 
+CHECKING THE CHECKS (mutation):
+- A green suite says the code passes the tests; it doesn't say the
+  tests would fail on wrong code. A too-loose property, or a generator
+  that never reaches the interesting inputs, looks exactly like a
+  strong one while it's green — and tiers 3 and 4 above are only as
+  strong as that.
+- Mutation testing measures it mechanically: change the code under
+  test on purpose (flip a condition, drop a guard, pick the first
+  match instead of the last, return the input unchanged) and run the
+  tests. A mutant that survives is a rule nothing checks: tighten the
+  property, widen the generator, or add an example for it.
+- Most valuable when the same agent wrote the tests and the code (see
+  DECOMPOSITION.txt TEST-SPEC INTEGRITY): correlated blind spots show
+  up as surviving mutants, never as failing tests.
+- Tooling is per project (e.g. Stryker for JS/TS, PIT for the JVM,
+  mutmut for Python). Where none fits, a handful of hand-made mutants
+  aimed at the rules the new tests claim to cover is still worth one
+  run before trusting them.
+- Cost: a run repeats the suite once per mutant, so aim it at code
+  with real logic (core, saga), not glue, and it can run less often
+  than every change. A rising survival rate is the signal to read,
+  like a rising suppression count below.
+
 ESCAPE HATCHES:
 - Every tier has a cheap bypass, and an agent blocked by a check takes
   the cheapest way past it:
@@ -117,5 +140,8 @@ ESCAPE HATCHES:
   - Flag changes that touch a test and the code under test together,
     so the test diff gets read on its own rather than as part of the
     fix.
+  - A loosened property or a narrowed generator shows up as surviving
+    mutants (see CHECKING THE CHECKS above), even when the diff that
+    loosened it looked harmless.
 - Same order as everywhere else in this guideline: the mechanical
   signal finds the bypass, judgment decides whether it was legitimate.

@@ -48,6 +48,14 @@ TESTING:
   rule (see DECOMPOSITION.txt) — a hardcoded literal-keyed branch
   fails the moment the generator produces an input it wasn't written
   for.
+- For state transitions (see GLUE.txt), generate sequences of
+  transitions, not single inputs (model-based testing): apply each to
+  the state the previous ones produced and assert the invariants after
+  every step. Build each transition's input against the current state
+  (an id that exists, now and then one that doesn't); inputs
+  generated blind mostly don't apply, and the test passes without
+  exercising anything. Round trips are cheap and strong: do-then-undo
+  returns the starting state.
 - Keep example-based tests alongside properties for concrete
   regression cases (a specific bug that was fixed, a documented edge
   case) — properties and examples are complementary, not either/or.
