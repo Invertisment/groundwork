@@ -1,4 +1,4 @@
-# LLM Project Scaffolding
+# Groundwork
 
 A language-agnostic guideline for structuring AI-generated code around boundaries that can be checked mechanically, not just trusted.
 
