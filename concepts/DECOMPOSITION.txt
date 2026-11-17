@@ -1,7 +1,7 @@
 DECOMPOSITION (too-big / split-or-continue decision)
 
 CROSS-CUTTING NOTE:
-- This is not a fifth layer, it's the decision process for whether a unit
+- This is not a layer, it's the decision process for whether a unit
   of work (a function, a component) in any layer should be implemented
   directly or split into sub-units first. It governs how an agent works
   within FUNCTIONAL_CORE, INFRA_LAYER, and SAGA_COMPOSITION.

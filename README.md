@@ -2,6 +2,6 @@
 
 A language-agnostic guideline for structuring AI-generated code around boundaries that can be checked mechanically, not just trusted.
 
-- [`concepts/`](concepts/) — the layer definitions (functional core, infra, sagas, glue, boundaries, decomposition, verification)
+- [`concepts/`](concepts/) — the layer definitions (functional core, data, infra, sagas, glue, boundaries, decomposition, verification)
 - [`AGENTS.md`](AGENTS.md) — how a coding agent should use this repo to scaffold a new project
 - [Invertisment/qr-tools](https://github.com/Invertisment/qr-tools) — an example app gated this way

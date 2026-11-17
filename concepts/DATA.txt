@@ -1,0 +1,85 @@
+DATA (reference data and static config)
+
+PROPERTY TEST:
+- Plain values versioned with the code: no I/O, nothing read at
+  runtime, no logic beyond deriving one value from another.
+- Imported only by glue and by other data modules. Core, infra and
+  saga never import it; they receive it as a parameter.
+
+WHY:
+- A table imported straight into logic binds that logic to the one
+  table: no test can give it any other input, so its tests run on the
+  real data whether they import it or not (see FUNCTIONAL_CORE.txt
+  TESTING for how such tests fail when the data changes).
+- Without a rule, importing the real table into logic is always the
+  easiest move. As a layer, the rule is the same directory-based
+  import-direction check that guards every other layer (see
+  BOUNDARIES.txt): no naming convention to remember, nothing extra for
+  the checker to parse.
+
+MAY NOT EXIST:
+- A project with no built-in tables, catalogs or defaults has no data
+  layer. Add it the first time logic needs one.
+
+BELONGS HERE:
+- Catalogs and reference tables: a product catalog, rate tables, a
+  frequency band plan, country codes.
+- Static defaults and config values: a form's opening state, a feature
+  table, limits that ship with a release.
+- Ids and the types derived from them: an id type built from a table's
+  keys, a union of its entries, an enum of what the table holds. They
+  can't move away from the values they're computed from, and keeping
+  them here keeps logic from being typed against the real table (see
+  FUNCTIONAL_CORE.txt EDGE CASES). Adding an id is a data-only change:
+  core never names one.
+- Membership checks for those ids (is this string one of the table's
+  keys), so glue can narrow the plain ids core hands back without a
+  cast.
+- Tests of the data (see TESTING).
+
+DOES NOT BELONG HERE:
+- Shapes: the types and schemas logic is written against go in core,
+  so logic can import a shape without the data. Data imports them from
+  core to type its values. A set of ids is not a shape: it's data.
+- Anything read at runtime (environment variables, config files, a
+  database, a remote flag service): that's infra, loaded and bound by
+  glue.
+- Logic, even small: a function that does more than derive a value
+  from a table goes in core and takes the table as a parameter.
+
+IMPORT DIRECTION:
+- Data may import core (shapes, core functions to derive values, and
+  core logic in its scenario tests) and data.
+- Glue may import data; core, infra and saga may not.
+- Same purity rule as core: no I/O or framework packages.
+
+TESTING:
+- Tests in this layer are the only tests that read real data, and they
+  come in two kinds, neither of which drifts silently:
+  - invariants of the data itself (well-formed, no duplicate ids,
+    every reference resolves): the data is what's under test, so a
+    data change is exactly what they should look at;
+  - a few named scenario tests: real data in, exact reviewed results
+    out. They're meant to fail when the data changes in a way that
+    matters to them, and get re-reviewed when they do.
+- Never a weak assertion over real data ("every result fits"): that's
+  the kind that drifts silently.
+- The import direction does the rest: a test file sits in its layer
+  and imports what that layer may, so a core test can't reach real
+  data by construction.
+
+EDGE CASES:
+- A value derived with core logic (a precomputed index, a lookup map
+  built from a table) is still data: data may call core to build it.
+- Data that changes without a release (prices updated daily, a list
+  edited by users) has stopped being data: it's read at runtime, so
+  it's infra.
+- Glue's "config loading" is the runtime counterpart: glue loads
+  runtime config through infra and binds static data from this layer,
+  the same way.
+- Languages that can't derive types from values have nothing to move:
+  ids are plain values, validated against the table logic was given.
+- Not the "data layer" of some platform guides (Android's
+  repositories and data sources): reading and writing data at runtime
+  is infra here. This layer only holds values that ship with the
+  code.

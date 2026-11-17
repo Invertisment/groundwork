@@ -38,10 +38,12 @@ EDGE CASES:
 - A function that imports a built-in data table (a product catalog,
   a rate table, a config constant) is pure, but it's bound to that one
   table: no test can give it any other input. Pass the data in as a
-  parameter like any other config; glue (the composition root) binds
-  the real table. The same goes for types derived from the data (an id
-  type built from the table's keys): logic typed by them only accepts
-  the real data, so it validates ids against the table it was given.
+  parameter like any other config. The real table lives in the data
+  layer and glue (the composition root) binds it (see DATA.txt). The
+  same goes for types derived from the data (an id type built from the
+  table's keys): logic typed by them only accepts the real data, so it
+  takes plain ids instead and validates them against the table it was
+  given. Adding an id to the data then never touches core.
 
 TESTING:
 - Fast unit tests, plain data fixtures, no mocks, no test doubles needed.
@@ -78,25 +80,5 @@ TESTING:
   Restating the data in the test is no fix either: it breaks the same
   way and gets updated by habit. Synthesized data makes the tests
   robust: they change only when the logic does.
-- Real data belongs in two kinds of test only, neither of which drifts
-  silently:
-  - invariants of the data itself (well-formed, no duplicate ids,
-    every reference resolves): the data is what's under test, so a
-    data change is exactly what they should look at;
-  - a few named scenario tests: real data in, exact reviewed results
-    out. They're meant to fail when the data changes in a way that
-    matters to them, and get re-reviewed when they do.
-  Never a weak assertion over real data ("every result fits"): that's
-  the kind that drifts silently.
-- Make it mechanical with an import rule (see BOUNDARIES.txt), a few
-  lines in the same checker: where the project has real data modules,
-  they may be imported only by glue and by data/scenario test files.
-  A core module importing one fails the check, which is what forces
-  the data in as a parameter above; without it, importing the real
-  table straight into logic is always the easiest move.
-  - Both sides are marked by name, since the path is all the checker
-    sees: data modules (e.g. *.data.*) and the tests allowed to read
-    them (e.g. *.data.test.*).
-  - Data modules hold values only. The shapes (types, schemas) live in
-    ordinary core modules, so logic can import a shape without the
-    data.
+- Real data is tested only in the data layer, and core can't import
+  it, so a core test can't reach it (see DATA.txt TESTING).

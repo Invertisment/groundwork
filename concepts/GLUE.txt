@@ -15,7 +15,8 @@ BELONGS HERE:
   Dagger/Hilt, etc.) or by hand. Neither is required by the other
   layers; see COMPOSITION ROOT below.
 - Routing / request dispatch.
-- Config and environment loading.
+- Config and environment loading, and binding static data from the
+  data layer (see DATA.txt) to the code that takes it as a parameter.
 - Framework-mandated entry points: main(), an HTTP server bootstrap,
   an Android Activity/Service/InputMethodService registration.
 
