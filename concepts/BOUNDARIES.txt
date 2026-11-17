@@ -74,6 +74,17 @@ LAYER SHOULD BE THE BOTTOM-LEVEL CUT:
   language has) is exactly the kind of check an agent can write and a
   human can verify once.
 
+ADDING A LAYER:
+- A new layer is justified only by an import-direction rule it adds
+  that catches a real mistake (DATA's "core can't import the real
+  tables" catches logic and tests bound to one table). A grouping that
+  changes no rule — say, shapes split out of core, importable by
+  everyone exactly like core already is — is a component or a file,
+  not a layer.
+- Each layer costs a reserved directory name and a row in every
+  project's checker, so the bar is the rule it adds, not how tidy the
+  grouping looks.
+
 HUMAN-GATED, NOT AUTOMATABLE:
 - Drawing the first boundary. An agent can tell you a boundary is
   *leaking* (mechanical signal), but not what the boundary *should
