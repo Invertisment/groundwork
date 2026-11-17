@@ -32,6 +32,8 @@ HOW IT'S ENFORCED (mechanical, once drawn):
 - Purity checks on the core: ban imports of DB drivers, HTTP clients,
   filesystem, clock, random, and framework types from core packages.
 - Circular-import detection.
+- Where the project has real data modules: they're importable only by
+  glue and data tests (see FUNCTIONAL_CORE.txt TESTING).
 - These are plain CI checks (e.g. an import-linter / dependency-graph
   tool for whatever language the project uses) — the concrete tool
   is a per-project verification predicate, not defined in this file.

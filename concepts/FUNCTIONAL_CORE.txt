@@ -68,11 +68,16 @@ TESTING:
   case) — properties and examples are complementary, not either/or.
 - Logic tests own their inputs: a small fixture written in the test, or
   a generated one. A test that loads shared data (the real catalog,
-  config, seed data) silently changes what it checks when that data
-  drifts: it still passes, but on other cases, and the coverage it
-  lost shows up nowhere. Restating the data in the test is no fix
-  either: it breaks on every correct data edit and gets updated by
-  habit.
+  config, seed data) fails one of two ways when that data changes:
+  - with exact assertions, it breaks on every correct data edit — and
+    one edit to a table many tests read breaks many tests at once, all
+    for a change that was right;
+  - with loose assertions, it silently changes what it checks: it
+    still passes, but on other cases, and the coverage it lost shows
+    up nowhere.
+  Restating the data in the test is no fix either: it breaks the same
+  way and gets updated by habit. Synthesized data makes the tests
+  robust: they change only when the logic does.
 - Real data belongs in two kinds of test only, neither of which drifts
   silently:
   - invariants of the data itself (well-formed, no duplicate ids,
@@ -83,8 +88,15 @@ TESTING:
     matters to them, and get re-reviewed when they do.
   Never a weak assertion over real data ("every result fits"): that's
   the kind that drifts silently.
-- Make it mechanical with an import rule (see BOUNDARIES.txt): real
-  data modules may be imported only by glue and by data/scenario test
-  files (marked by name, e.g. *.data.test.*). A core module importing
-  one fails the check, which is what forces the data in as a
-  parameter above.
+- Make it mechanical with an import rule (see BOUNDARIES.txt), a few
+  lines in the same checker: where the project has real data modules,
+  they may be imported only by glue and by data/scenario test files.
+  A core module importing one fails the check, which is what forces
+  the data in as a parameter above; without it, importing the real
+  table straight into logic is always the easiest move.
+  - Both sides are marked by name, since the path is all the checker
+    sees: data modules (e.g. *.data.*) and the tests allowed to read
+    them (e.g. *.data.test.*).
+  - Data modules hold values only. The shapes (types, schemas) live in
+    ordinary core modules, so logic can import a shape without the
+    data.
