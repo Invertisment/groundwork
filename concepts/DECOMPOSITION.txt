@@ -71,11 +71,14 @@ MECHANICAL DETECTORS FOR SIGNATURE B (no LLM judgment required):
   the tell. (A static complexity cap has the same false-positive/
   false-negative problems as a static LOC cap; the delta across
   retries is the actual signal, not the absolute number.)
-- Clone/near-duplicate branch detection. AST-based clone detectors
-  (e.g. PMD CPD, jscpd) catch branches whose bodies are structurally
-  identical and differ only by a substituted literal — the closest
-  syntactic fingerprint of copy-paste special-casing, and probably the
-  single strongest detector for this pattern.
+- Clone/near-duplicate branch detection, with a detector that ignores
+  literals (e.g. PMD CPD with --ignore-literals, for the languages it
+  supports): it catches branches whose bodies are structurally
+  identical and differ only by a substituted literal, the closest
+  syntactic fingerprint of copy-paste special-casing. A detector that
+  matches tokens exactly (jscpd) misses it, since the substituted
+  literal breaks the match. Where no such detector fits, the other two
+  detectors and the property tests below carry it.
 - Literal correlation with test fixtures. Parse literals used in a
   new/changed branch condition and check for exact matches against
   literals in the test file's inputs/expected values. A branch keyed

@@ -75,8 +75,9 @@ LIBRARIES IN THE LAYERS:
 
 REUSE INSIDE THE PROJECT:
 - Before writing a shape, helper or constant, search for one. That's a
-  rule for the generated project's AGENTS.md, with a check after it
-  (see DETECTING DUPLICATES) for when the search was skipped.
+  rule for the generated project's AGENTS.md. The checks after it (see
+  DETECTING DUPLICATES) catch only part of what a skipped search
+  leaves behind.
 - A shape has one owner: the core module whose invariant it serves
   (see DATA.txt, shapes go in core). Every other module imports it.
 
@@ -89,24 +90,25 @@ DELIBERATE COPIES:
 - Don't merge look-alikes across components only because they look
   alike: one shared type couples two invariants (see BOUNDARIES.txt).
   Similar today isn't the same rule.
-- No list of copies to keep up. A deliberate copy the duplicate tool
-  still flags is silenced with that tool's own ignore setting, which
-  is a diff someone sees.
+- No list of copies to keep up: the different names are the record.
 
 DETECTING DUPLICATES (mechanical):
-- An existing tool, not a custom check: token or AST clone detectors
-  (e.g. PMD CPD, jscpd), the same tools DECOMPOSITION.txt uses against
-  branches special-cased to tests. They catch copied code and copied
-  type declarations alike. Their minimum size (tokens or lines) keeps
-  small look-alikes like {x, y} or {id, name} from being reported;
-  set it where real duplicates start, not lower.
-- Where the language has a lint for the same name declared in several
-  modules, turn it on too. Where nothing exists, don't write one: the
-  clone detector, the unused-code tools below and the search-first
-  rule in AGENTS.md carry it.
+- No clone detector by default (PMD CPD, jscpd). They find pasted
+  code, and agents rarely paste: they re-type, with a value or a name
+  changed, which a token match misses. The look-alikes they do find
+  are mostly ones a human would leave as they are, so the check turns
+  into noise everyone learns to skip.
+- Types are the duplicate check for shapes: a shape declared once, and
+  every literal of it checked against that declaration by the type
+  checker. Where the language has a lint for the same name declared in
+  several modules, turn it on.
 - Unused exports and dependencies (e.g. knip for TS, vulture for
   Python): a re-declaration often leaves the original unused, so dead
-  code is a second signal pointing at the same duplicate.
+  code points at the duplicate.
+- Without types, a shape built in more than one place is built by one
+  constructor function in core, which the others call. No check
+  enforces that: it rests on the search-first rule and on review, and
+  the project records it in GROUNDWORK.md as a known gap.
 
 EDGE CASES:
 - Test fixtures aren't duplicates of data: tests own their inputs on
