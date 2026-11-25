@@ -14,6 +14,11 @@ TRIGGER: EMPIRICAL, NOT ESTIMATED:
   -> run test -> retry with the failing assertion, up to N attempts.
   "Too big" is something the attempt reveals, not something guessed
   before trying.
+- One more observed trigger, in core only: a function whose comment
+  needs more than one sentence (see HUMAN_READING.txt COMMENTS). Like
+  the others it's read off code that exists, not estimated from a
+  description, and it goes to DECOMPOSE unless a marker with a reason
+  says the function does one thing.
 
 THE BOUNDED LOOP (process):
 - Contract before implementation: a signature stub (a throwing
