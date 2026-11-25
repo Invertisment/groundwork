@@ -44,6 +44,12 @@ EDGE CASES:
   table's keys): logic typed by them only accepts the real data, so it
   takes plain ids instead and validates them against the table it was
   given. Adding an id to the data then never touches core.
+- Core may declare a contract for infra to implement (dependency
+  inversion, see GLUE.txt COMPOSITION ROOT), but doesn't call it. A
+  core function that calls a port can only be tested against a fake,
+  and the test then checks how the fake was used, not what was
+  decided: at best a smoke test. Glue or saga makes the call and
+  passes core the result as plain data.
 
 COMMENTS:
 - None by default: a pure function is its signature, and its rules

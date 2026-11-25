@@ -29,11 +29,15 @@ COMPOSITION ROOT (DI without a framework):
   saga code needs it (e.g. via constructor), instead of autowiring —
   same rule, same guarantee, no framework required.
 - The principle underneath is dependency inversion (the D in SOLID):
-  core and saga declare the contract they need, in their own terms and
-  in their own layer, and infra implements it. At runtime core calls
-  infra, but the import points the other way, from infra to the
-  contract, so the import-direction check holds (see BOUNDARIES.txt).
-  Glue is the one place that sees both sides and connects them.
+  the contract is declared by the side that needs it, in its own terms
+  (core or saga), and infra implements it. The import points from infra
+  to the contract, against the direction of the call, so the
+  import-direction check holds (see BOUNDARIES.txt). Glue is the one
+  place that sees both sides and connects them.
+- Core may declare a contract but never calls one (see
+  FUNCTIONAL_CORE.txt EDGE CASES). Glue or saga calls it, hands core
+  the result as plain data, and carries out the plain value core
+  returns.
 - This is a named pattern (Mark Seemann's "composition root"): the one
   place in the app where every concrete type gets instantiated and
   handed to the abstraction that needs it. A DI framework automates
