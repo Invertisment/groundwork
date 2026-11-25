@@ -1,0 +1,134 @@
+RUNTIME ENVELOPE (where the project runs, and what it may use there)
+
+CROSS-CUTTING NOTE:
+- Not a layer. It records the resources the code has where it runs
+  (memory, CPU time per call or request, code size, storage, network,
+  quotas, concurrency) and turns the ones that bind into budgets with
+  checks. It also justifies cuts no other concept would make: what
+  loads lazily, what streams, what gets sharded (see FORCED CUTS).
+
+PROPERTY TEST:
+- Every resource that can run out on a target has either a measured
+  budget checked in CI, or a line in GROUNDWORK.md saying why it can't
+  run out there.
+- Anything that grows with input (a list, a file read, a result set, a
+  queue, a cache, a string being built) is bounded or streamed, on
+  every target.
+
+WHY:
+- Resource limits fail late and far from their cause. The code is
+  correct, the tests are green, and it falls over on the first big
+  folder, the first big customer, the first traffic spike. An agent
+  working on a desktop never sees it, and its tests use small inputs.
+- The same code is fine on one target and fatal on another: a list
+  kept whole costs nothing in 2 GB and crashes in 192 KB (an EdgeTX
+  radio, where Lua shares the heap with the firmware: running it out
+  also dropped the radio link). Unless the envelope is written down,
+  neither the agent nor a reviewer has a reason to look.
+- The size of the limit changes; the failure doesn't. Unbounded growth
+  is the bug on every target. Only the input size it fails at differs.
+
+HUMAN-GATED:
+- Which targets exist and what their limits are. An agent can't know
+  the hardware, the container's memory limit or the plan's quotas;
+  same as the first boundary cut (see BOUNDARIES.txt). Ask before
+  scaffolding, and record it in GROUNDWORK.md.
+- A limit nobody knows is a known gap, not a guess. A reading taken
+  after a crash ("free memory: 56 bytes") is where it failed, not a
+  budget.
+
+WHAT TO RECORD (GROUNDWORK.md):
+- Each target in a short bullet: what it is, its runtime and version,
+  the limits that bind. E.g. "radio: Lua 5.2, ~192 KB shared heap,
+  one call per frame" or "API: 512 MB container, p99 under 200 ms,
+  3 replicas".
+- Which resources don't bind, and why (a CLI run by hand on a laptop
+  doesn't need a memory budget).
+- Each cut the envelope forced (see FORCED CUTS).
+
+TIGHT AND LOOSE:
+- Decide per resource, not per project: a backend can have memory to
+  spare but a tight latency budget, or a cap on queries per request.
+- Tight (a microcontroller or radio, a browser extension's worker, a
+  serverless function's size or cold start limit, a mobile app's
+  background quota): a measured budget and a check that fails CI.
+- Loose (gigabytes of memory on a backend): no budget needed. The
+  bounded-growth property still holds, and where it's cheap a load or
+  soak test at realistic sizes stands in for budgets.
+
+BUDGETS:
+- Measured, not estimated (same as DECOMPOSITION.txt's empirical
+  trigger): run the thing, record what it uses, set the budget below
+  the known failure point with margin, and record both numbers.
+- Measured on what ships: the built, bundled, minified or stripped
+  artifact, since that's what uses the memory and the startup time.
+- Measured at the peak, not only at the end: garbage, buffers and
+  intermediate copies count while they're alive.
+- When the real target can't run in CI, a stand-in does (a desktop
+  interpreter for a radio, a container with a memory limit for a
+  host). Ratios then matter more than exact numbers, and the
+  difference from the real target is a known gap.
+- A budget raised to make a check pass is an escape hatch (see
+  VERIFICATION.txt ESCAPE HATCHES). A raised budget gets a
+  GROUNDWORK.md line saying why.
+
+SEVERAL TARGETS:
+- When the same code ships to several targets (firmware versions,
+  browsers, OS versions, a runtime's major versions, a region with a
+  smaller instance), the checks run on each one, or on the tightest
+  one with a recorded reason why it covers the rest.
+- The test matrix names the targets explicitly (one CI matrix row per
+  runtime or version), so adding a target is adding a row, and a
+  target nobody tests shows up as a missing row. E.g. unit tests run
+  on both the desktop's Lua 5.4 and the radio's Lua 5.2.
+- Budgets are per target: each row checks its own numbers.
+- A language or API feature one target lacks is a purity-style rule
+  (see BOUNDARIES.txt): a lint bans it in shipped code, rather than a
+  test hoping to reach it. E.g. a global the radio's Lua doesn't have
+  is banned in every shipped file.
+- Where targets behave differently at runtime, asking which one this
+  is ("does this API exist") is infra; what to do or show when it's
+  missing is core.
+
+FORCED CUTS:
+- The envelope can force cuts that have nothing to do with business
+  invariants: code loaded on demand and dropped after, a module split
+  so each file compiles in the memory there is, a long job split into
+  steps one call each, a dataset sharded across nodes, a replica or a
+  cache in front of a database.
+- These are a different kind of cut from BOUNDARIES.txt's, and they're
+  allowed. Each one gets a GROUNDWORK.md bullet saying it was forced
+  by the envelope, so nobody later reads it as a domain boundary, or
+  "cleans it up" by merging it back.
+- Keep the two kinds apart where the language allows: split what
+  ships (bundles, parts, shards, deployments) by the envelope, and
+  source modules by invariants. Where they can't be kept apart (the
+  unit that loads is the source module), the split follows the
+  envelope and its bullet says so.
+- Mirroring, sharding and replication are the large-system form of the
+  same thing. Keeping the copies consistent is saga or reconciliation
+  (see SAGA_COMPOSITION.txt), not glue.
+
+DESIGN CONSEQUENCES (common ones, not a checklist):
+- Stream or page instead of loading whole. Keep only the N needed
+  while reading (top-N as items arrive), not sort-after-load.
+- Every buffer, queue, cache and carried-over remainder has a cap, and
+  what happens at the cap (drop, stop, report an error) is a core
+  decision with a test.
+- Work per call or request is bounded: long work becomes resumable
+  steps whose progress is plain data in core state. Where only infra
+  can hold the progress (an OS directory iterator), its contract says
+  so (see INFRA_LAYER.txt CONTRACT REQUIREMENT).
+- Dependencies count against the envelope too: code size, memory at
+  load, startup time (see REUSE.txt).
+
+TESTING:
+- Budgets: an end-to-end or smoke test on the built artifact, on each
+  target or its stand-in, with inputs sized like the worst realistic
+  case (a folder of 200 logs, not 3).
+- Bounded growth is a property: generate inputs of growing size and
+  assert the peak (items kept, buffer length, queries made) stays
+  under the bound. In core this is cheap, since the bound is on state
+  that is plain data.
+- Generate sizes well past the bound (2x, 10x): a bound that only
+  kicks in at sizes the tests never reach looks the same as no bound.

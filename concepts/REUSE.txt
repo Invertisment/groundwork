@@ -1,0 +1,122 @@
+REUSE (libraries, and reuse inside the project)
+
+CROSS-CUTTING NOTE:
+- Not a layer. Two questions an agent answers before writing code:
+  does a library already do this, and does the project already have
+  it. Both get answered "no" by default, because writing is the
+  agent's cheapest move.
+
+PROPERTY TEST:
+- Every piece of code the project owns has a reason to be owned: no
+  library fits, or what's needed is small enough to own and is fully
+  checked.
+- One thing has one definition. A shape, rule or constant used in
+  several places is defined once and imported, except for copies kept
+  on purpose at a boundary, which have their own names (see
+  DELIBERATE COPIES).
+
+WHY:
+- An agent writes code faster than a human can read it. A CSV parser,
+  an HTTP client or a QR encoder costs it minutes to write. Owning one
+  costs the human reading it, every edge-case bug the library would
+  already have had found, and its upkeep for as long as it ships. The
+  cost of code is reading and owning it, not writing it.
+- Agents re-declare instead of finding. The same type, helper or
+  constant appears again in each file that needs it, each copy
+  slightly different. Copies drift, and a fix lands in one of them.
+  Searching first costs the agent little, but nothing makes it search
+  unless a check fails when it doesn't.
+
+LIBRARIES (prefer earlier):
+1. The language's standard library or the platform's API.
+2. A mature, widely used library, above all for protocols, formats,
+   crypto, dates and times, parsing, compression and encoding (HTTP,
+   SSH, TLS, JSON, CSV with quoting, QR, image codecs). That's where
+   the edge cases and the security bugs are, and a library's users
+   have already found most of them.
+3. A small or little-known library. Read it like the project's own
+   code, because for review that's what it is. Pin it. Vendoring it
+   is fine where the ecosystem has no package manager.
+4. The project's own code for a narrow subset, when no library fits
+   the platform or the envelope (see RUNTIME_ENVELOPE.txt), or what's
+   needed is small with a clear spec. It gets property tests over
+   generated inputs, and a GROUNDWORK.md bullet saying why not a
+   library.
+5. The project's own implementation of a security-critical protocol
+   or of crypto: no. If no library fits, that's a scope question for
+   the human, not a task for the agent.
+
+WEIGHING A LIBRARY:
+- Maintained, widely used, a license that fits, fits the envelope
+  (code size, memory, startup time), and how much of it the project
+  needs.
+- A large dependency for one small function can cost more than the
+  function. Weigh the dependency's risk and size against the risk of
+  the code it replaces, not against its line count: twenty lines of
+  date arithmetic are riskier than two hundred lines of plain mapping.
+- The test harness most of all: a standard test runner, property-test
+  library, linter and mutation tool beat custom ones whenever they
+  exist and fit. Every line of custom harness is a line a human has
+  to read (AGENTS.md: never fully vibe the test harness). Custom
+  harness code is justified only for checks nothing existing does,
+  e.g. a purity lint over bytecode for a language without an import
+  linter.
+
+LIBRARIES IN THE LAYERS:
+- A library that does I/O is used from infra only, behind infra's
+  contract (see INFRA_LAYER.txt).
+- A pure library (a parser, an encoder, a math library) may be used
+  from core, but it's named on core's purity allowlist (see
+  BOUNDARIES.txt), so adding it is a diff someone reviews.
+- Framework types stay out of core (see FUNCTIONAL_CORE.txt), even
+  when the framework is the library.
+- Versions are pinned (a lockfile), so a dependency changes only in a
+  diff someone sees.
+
+REUSE INSIDE THE PROJECT:
+- Before writing a shape, helper or constant, search for one. That's a
+  rule for the generated project's AGENTS.md, with a check after it
+  (see DETECTING DUPLICATES) for when the search was skipped.
+- A shape has one owner: the core module whose invariant it serves
+  (see DATA.txt, shapes go in core). Every other module imports it.
+
+DELIBERATE COPIES:
+- Some copies are right. Infra's wire or database format next to
+  core's shape for the same thing. Two components with look-alike
+  types that guard different invariants. These get different names
+  and an explicit mapping between them, never a second declaration
+  under the same name.
+- Don't merge look-alikes across components only because they look
+  alike: one shared type couples two invariants (see BOUNDARIES.txt).
+  Similar today isn't the same rule.
+- Each deliberate copy the duplicate check would flag goes on its
+  allowlist with a one-line reason. The list is counted like
+  suppressions (see VERIFICATION.txt ESCAPE HATCHES).
+
+DETECTING DUPLICATES (mechanical):
+- Copied code: token or AST clone detectors (e.g. PMD CPD, jscpd), the
+  same tools DECOMPOSITION.txt uses against branches special-cased to
+  tests.
+- Duplicate types: the same type name declared in more than one
+  module, or structurally identical shapes under different names.
+  Clone detectors catch some of these. The rest needs a check over
+  the declarations themselves: list every type, record, struct and
+  interface declaration (from the compiler, the language server or a
+  parser), group them by name and by their normalized set of fields,
+  and fail on any group not on the allowlist. Where the language has
+  a dedicated tool for this, use it; otherwise it's a small generated
+  check, and part of the harness.
+- Unused exports and dependencies (e.g. knip for TS, vulture for
+  Python): a re-declaration often leaves the original unused, so dead
+  code is a second signal pointing at the same duplicate.
+
+EDGE CASES:
+- Test fixtures aren't duplicates of data: tests own their inputs on
+  purpose (see FUNCTIONAL_CORE.txt TESTING). Keep fixture values out
+  of the duplicate checks, or the check fights that rule. A type
+  declared again inside a test still counts.
+- Generated code (protobuf, OpenAPI clients) counts as a library here:
+  left out of the duplicate checks, regenerated rather than edited.
+- The envelope can force a copy (a helper repeated in a part file so
+  it doesn't load another part): record it as a forced cut (see
+  RUNTIME_ENVELOPE.txt FORCED CUTS).

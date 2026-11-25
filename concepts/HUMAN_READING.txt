@@ -1,0 +1,177 @@
+HUMAN READING (formatting, comments and docs)
+
+CROSS-CUTTING NOTE:
+- Not a layer. VERIFICATION.txt ranks checks by the human attention
+  they cost. This covers the rest of what a human reads: the layout of
+  the code, its comments, and the docs. Same rule as there: attention
+  is the binding constraint, so it goes to meaning, and whatever can
+  be generated or checked is.
+
+PROPERTY TEST:
+- Running the formatter changes nothing.
+- Every comment and doc says something the code, its tests and its
+  checks don't already say, and whatever in it can be checked (a path,
+  an identifier) is checked.
+- Comments and docs stay within a counted budget, so making them
+  longer is a decision someone sees.
+
+WHY:
+- Agents write prose as cheaply as code, and their default is more: a
+  comment on every function, a doc narrating every module, a README
+  listing every file. None of it fails a check, so it piles up, and
+  every line costs reading.
+- Prose that restates the code drifts. A function is renamed, a
+  constant changes, a file is deleted, and the comment still says the
+  old thing. Nothing fails, and the reader believes the comment. E.g.
+  a README pointing at a debugging script that was never committed.
+- Formatting noise is the same cost in a diff. An editor that formats
+  on save and an agent writing its own style undo each other, and the
+  human ends up reviewing whitespace.
+- "Be concise" can't be checked. The checks below make restating and
+  length cost something instead, so short prose about intent is the
+  cheapest thing to keep green.
+
+FORMATTING:
+- One formatter, shared by the human's editor and the build, so
+  neither keeps undoing the other. Before scaffolding, ask the human
+  which formatter their editor runs on save. If they don't know or
+  don't mind, use the one the language's standard language server
+  (LSP) formats with. Its settings live in a project file both read,
+  not in either one's personal config.
+- One engine, not several configured alike. Every editor in use and
+  the build call the same formatter (as an LSP, a plugin that replaces
+  the editor's own formatter, or its command-line tool). Two engines
+  never agree on wrapping, alignment and blank lines, however many
+  settings they share. .editorconfig only covers what every editor
+  reads (indent, charset, line endings), not one editor's own keys.
+  E.g. Java: the Eclipse formatter with one XML profile, read by JDTLS,
+  by IntelliJ through a plugin that runs the Eclipse engine, and by
+  the build; or a formatter with no settings (google-java-format,
+  palantir-java-format) with a plugin per editor. Imports are part of
+  this: editors sort them differently, so the formatter or the check
+  command orders them, and organize-on-save is off in every editor.
+- Which engine is a team decision, human-gated like the first boundary
+  cut, and recorded in GROUNDWORK.md. An engine the build can't run
+  isn't eligible: "format like my editor does" is a proposal with a
+  cost, not a default. E.g. IntelliJ's own formatter runs outside the
+  IDE only from a full IntelliJ install, so choosing it means
+  installing IntelliJ in CI; otherwise IntelliJ users install a plugin
+  that runs the shared engine.
+- Each editor the team uses gets set up to call that one formatter
+  (and the project's linter, where the editor can show its findings),
+  and the setup is written down per editor. The repo commits the
+  formatter's own settings file, which every editor and the build
+  read; it doesn't commit editor folders (.idea/, .vscode/), which
+  fill up with machine-local state and personal settings. Each
+  editor's setup is a few steps, or a snippet to paste into the
+  person's own config, pointing at that shared file: the plugin or
+  tool to install, format on save, organize imports off. In the README
+  if it's a line or two, otherwise in a doc the README links.
+  The editor list works like a target list (see RUNTIME_ENVELOPE.txt
+  SEVERAL TARGETS): adding an editor is adding its setup, and an
+  editor nobody documented shows up as a missing entry. The CI check
+  still holds for any editor not on the list.
+- Teams mix editors, and not everyone cares about formatting. The CI
+  check is what makes the formatting hold for the people who don't,
+  so the ones who do aren't left cleaning up after them.
+- The one command that runs every check formats in place first,
+  repeating until the files stop changing: one pass can leave work for
+  the next, and only a settled file is one the editor's single pass on
+  save leaves alone.
+- CI never formats. It runs the formatter in check mode (or formats,
+  then fails on any diff). The formatter is pinned to the version the
+  human runs: two versions of one formatter can disagree, and CI would
+  then flag files the editor considers done.
+- Anything that quotes code (mutation markers, snippets in docs)
+  quotes it as formatted.
+
+COMMENTS:
+- By default, none. A name that needs explaining gets renamed first.
+- One sentence where the code can't say why: a constraint, a choice
+  that looks wrong but isn't, a workaround and what it works around.
+  E.g. "collect garbage now: Lua shares the radio's heap".
+- Longer only for a contract: an infra operation's idempotency,
+  failure modes and compensation (see INFRA_LAYER.txt CONTRACT
+  REQUIREMENT), or a format another module depends on. Before writing
+  a long one, ask whether a test or a type could hold it instead: a
+  contract in a test fails when it's broken, one in a comment doesn't.
+- Never a restatement of the code, a changelog, or the story of how
+  the code got this way. That's what the commit message is for.
+
+ONE HOME FOR EACH KIND OF TEXT:
+- Why a line is odd: a comment at that line.
+- A decision and its reason, a deviation, a known gap: a bullet in
+  GROUNDWORK.md (or an ADR, in a project big enough to need them).
+- How to install, run and use it: the README.
+- How it works: the code and its tests, not a doc.
+- Anything derivable from the code (a file tree, an API listing, the
+  config options, the list of modules): generated by the check
+  command, or not written at all. Written by hand, it's the first
+  thing to drift.
+- Text that fits none of these probably shouldn't exist. The usual
+  case is an "architecture overview" that narrates each module.
+
+README:
+- The README is for humans. Each root file has one reader:
+  - README: a human orienting themselves, or installing and using it.
+  - AGENTS.md: agents (their tools load it on their own; they don't
+    load the README).
+  - GROUNDWORK.md: both, for the decisions.
+  None repeats another; each points to the others where needed.
+- Short regardless of project size. A bigger project earns more docs
+  elsewhere (docs/, code comments, ADRs), not a longer README.
+- The most orienting fact goes in the first line or two. Contents and
+  instructions are short bullets, not prose. A human should be
+  oriented in one skim, before they'd stop reading.
+- One line says GROUNDWORK.md exists, so a human knows where the
+  design choices, budgets and known gaps are.
+- The same holds for a README inside a package or component. An
+  agent left alone with one grows it to a thousand lines that nobody
+  reads and nothing checks (see RAW_MESSAGES.txt, where this guideline
+  started). The budget below applies to each README, not only the
+  root one.
+- This repo's own README and Invertisment/qr-tools's are the worked
+  examples.
+
+CHECKS (mechanical):
+- References: every file path, module and identifier that a comment
+  or doc names as code (in backticks, or as a path) must exist. A
+  rename then breaks every doc that names the old name. A doc that
+  narrates the code names many things and breaks often; one about
+  intent names few and rarely breaks. This is the main lever against
+  exhaustive docs: it makes restating cost something without anyone
+  judging the prose.
+- Values: a doc names a constant rather than repeating its value
+  ("`max_files` in the config", not "10"). Where a doc must state the
+  value (a README telling users what they'll see), a check compares it
+  with the code.
+- Budgets: the README at most N lines, a comment block at most M
+  lines, comments at most a ratio R of a file's lines. The project
+  picks N, M and R and records them in GROUNDWORK.md. Going over one
+  takes a marker with a reason, counted like suppressions (see
+  VERIFICATION.txt ESCAPE HATCHES), and raising a budget is a diff
+  someone sees. Crude on purpose: it doesn't judge which lines are
+  good, it only makes length a decision rather than a default.
+- Generated docs are regenerated by the check command, and CI fails
+  on any diff, the same way it treats formatting.
+- These checks read comments and docs, so they're part of the
+  project's harness (AGENTS.md: never fully vibe the test harness).
+  Keep them small.
+
+REVIEW (a suggestion, never a gate):
+- The deletion test: if this sentence were deleted, what would a
+  reader get wrong? If nothing, delete it. An LLM reviewer can apply
+  it and suggest deletions, but its verdict is not evidence (see
+  VERIFICATION.txt, review is the weakest tier).
+
+EDGE CASES:
+- Tests: a test's name says which rule it checks, and that's its
+  comment. A property test's generator may need a line on what it
+  covers and what it leaves out; that's the highest-stakes read in
+  the suite (see VERIFICATION.txt).
+- A library's public API, used by people who won't read its source:
+  a doc comment per public function is part of the interface. The
+  reference check and the budget still apply, and the docs are
+  preferably generated from those comments.
+- Files written for agents (AGENTS.md, CLAUDE.md) are pointers, not
+  copies, and the same budget applies to them.
