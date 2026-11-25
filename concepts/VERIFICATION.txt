@@ -113,14 +113,52 @@ CHECKING THE CHECKS (mutation):
 - Most valuable when the same agent wrote the tests and the code (see
   DECOMPOSITION.txt TEST-SPEC INTEGRITY): correlated blind spots show
   up as surviving mutants, never as failing tests.
-- Tooling is per project (e.g. Stryker for JS/TS, PIT for the JVM,
-  mutmut for Python). Where none fits, a handful of hand-made mutants
-  aimed at the rules the new tests claim to cover is still worth one
-  run before trusting them.
-- Cost: a run repeats the suite once per mutant, so aim it at code
-  with real logic (core, saga), not glue, and it can run less often
-  than every change. A rising survival rate is the signal to read,
-  like a rising suppression count below.
+- Where the mutants come from matters as much as running them: a
+  mutant only checks a rule someone (or something) thought to mutate.
+
+MUTANT SOURCES (strongest -> weakest):
+- "Strength" here is who picks the mutants. The fewer choices the
+  author of the tests makes, the less their blind spots decide what
+  gets checked.
+1. A mutation tool for the language (e.g. Stryker for JS/TS, PIT for
+   the JVM, mutmut for Python, cargo-mutants for Rust). Every operator
+   on every line it covers; nobody picks.
+2. A small generated mutator, where no tool fits the language or the
+   build. A script applies a fixed set of operators to every place
+   they match in core and saga files: flip a comparison (< to <=, ==
+   to ~=), swap and/or, drop a not, add or subtract one from a number
+   or an index, return the input or an empty value instead. Nobody
+   picks here either; it's tier 1 with fewer operators. It's part of
+   the harness, so a human reads it (AGENTS.md: never fully vibe the
+   test harness).
+3. Hand-placed markers: a named mutant written next to the line it
+   changes (e.g. `-- @mutant id: from => to`). Only for mutants no
+   operator produces, the ones that change meaning: the first match
+   instead of the last, a scan run in the other direction, a guard
+   dropped, a domain rule off by one in a way no operator spells.
+- Markers supplement tier 1 or 2; they're never the only mutation
+  gate past a first run. Write them from the requirement, not from the
+  tests: by a human, or before the tests exist, or reviewed by a human
+  with the requirement in hand. When the agent that wrote the tests
+  also places the markers, a rule it never thought of gets neither a
+  test nor a marker, and the run stays green.
+- A project with markers only (no tool, no generated mutator) records
+  that as a known gap in its GROUNDWORK.md.
+
+EQUIVALENT MUTANTS:
+- Some generated mutants can't change behavior (`>=` instead of `>`
+  where the two sides are never equal). Each one goes on a list with a
+  one-line reason. The list is counted like suppressions (see ESCAPE
+  HATCHES): not dropped from the run silently, and not "killed" by a
+  test pinned to implementation details.
+
+MUTATION COST:
+- A run repeats the suite once per mutant, so aim it at code with real
+  logic (core, saga), not glue. Generated mutants can be limited to
+  the lines a change touched, which keeps a per-change run cheap; the
+  full run can be less frequent (nightly, before a release).
+- A rising survival rate is the signal to read, like a rising
+  suppression count below.
 
 ESCAPE HATCHES:
 - Every tier has a cheap bypass, and an agent blocked by a check takes
