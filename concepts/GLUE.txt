@@ -133,6 +133,15 @@ TRANSITIONS ARE NOT THE SAME THING AS "REDUCER":
   restore — the saving itself is infra (see INFRA_LAYER.txt EDGE
   CASES).
 
+COMMENTS:
+- One sentence where the wiring looks odd because of the platform: a
+  lifecycle order, a framework quirk, a workaround. E.g. "collect
+  garbage now: Lua shares the radio's heap".
+- Wiring that needs more than a sentence to explain is usually
+  deciding something: move the decision to core rather than going
+  over the limit. Otherwise the limit is a budget, with a marker to go
+  over it (see HUMAN_READING.txt CHECKS).
+
 TESTING:
 - Smoke-level only: does the app start and wire correctly.
 - Wanting a real logic test here is a signal the code doesn't belong

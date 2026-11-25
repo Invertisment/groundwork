@@ -45,6 +45,15 @@ BELONGS HERE:
   record is enough to turn silent failure into visible, recoverable
   failure.
 
+COMMENTS:
+- The steps, their compensations and the progress record are code and
+  tests, not prose. One sentence says why the steps run in this order
+  when nothing in the data forces it.
+- The progress record's format is a contract a later run depends on
+  (recovery after a crash), so a test holds it: write it, read it
+  back, resume. Otherwise the sentence limit is a budget, with a
+  marker to go over it (see HUMAN_READING.txt CHECKS).
+
 TESTING:
 - With fakes of the underlying infra — but only fakes that have been
   contract-verified for parity against the real infra (see

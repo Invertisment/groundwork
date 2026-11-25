@@ -53,6 +53,12 @@ IMPORT DIRECTION:
 - Glue may import data; core, infra and saga may not.
 - Same purity rule as core: no I/O or framework packages.
 
+COMMENTS:
+- One line on a table saying where its values come from (a standard
+  and its version, a datasheet, a measurement), when the name doesn't
+  say. The values aren't restated or summarized: what's true of them
+  is held by the data's own tests.
+
 TESTING:
 - Tests in this layer are the only tests that read real data, and they
   come in two kinds, neither of which drifts silently:

@@ -58,8 +58,11 @@ TIGHT AND LOOSE:
 
 BUDGETS:
 - Measured, not estimated (same as DECOMPOSITION.txt's empirical
-  trigger): run the thing, record what it uses, set the budget below
-  the known failure point with margin, and record both numbers.
+  trigger): run the thing, record what it uses, and set the budget
+  below the known failure point with margin. The budget lives in the
+  check's config; GROUNDWORK.md records the failure point it was set
+  against and names where the budget lives (see HUMAN_READING.txt
+  CHECKS, values).
 - Measured on what ships: the built, bundled, minified or stripped
   artifact, since that's what uses the memory and the startup time.
 - Measured at the peak, not only at the end: garbage, buffers and

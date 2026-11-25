@@ -45,6 +45,20 @@ EDGE CASES:
   takes plain ids instead and validates them against the table it was
   given. Adding an id to the data then never touches core.
 
+COMMENTS:
+- None by default: a pure function is its signature, and its rules
+  are its property tests (see HUMAN_READING.txt COMMENTS).
+- At most one sentence on a function, and the check is hard: going
+  over fails, and no marker gets past it. A function that needs more
+  does more than one thing, so it goes to DECOMPOSE (see
+  DECOMPOSITION.txt). Splitting core is cheap: pure functions compose
+  with nothing to pass around but values.
+- A project can relax this in GROUNDWORK.md, with a reason, for the
+  whole project or a named module, never per function.
+- Deleting the comment also gets past it, and no check can stop that.
+  If the function reads fine without it, nothing was lost; if not,
+  that's for review.
+
 TESTING:
 - Fast unit tests, plain data fixtures, no mocks, no test doubles needed.
 - Prefer property-based/generative tests over enumerated examples

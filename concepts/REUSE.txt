@@ -89,23 +89,21 @@ DELIBERATE COPIES:
 - Don't merge look-alikes across components only because they look
   alike: one shared type couples two invariants (see BOUNDARIES.txt).
   Similar today isn't the same rule.
-- Each deliberate copy the duplicate check would flag goes on its
-  allowlist with a one-line reason. The list is counted like
-  suppressions (see VERIFICATION.txt ESCAPE HATCHES).
+- No list of copies to keep up. A deliberate copy the duplicate tool
+  still flags is silenced with that tool's own ignore setting, which
+  is a diff someone sees.
 
 DETECTING DUPLICATES (mechanical):
-- Copied code: token or AST clone detectors (e.g. PMD CPD, jscpd), the
-  same tools DECOMPOSITION.txt uses against branches special-cased to
-  tests.
-- Duplicate types: the same type name declared in more than one
-  module, or structurally identical shapes under different names.
-  Clone detectors catch some of these. The rest needs a check over
-  the declarations themselves: list every type, record, struct and
-  interface declaration (from the compiler, the language server or a
-  parser), group them by name and by their normalized set of fields,
-  and fail on any group not on the allowlist. Where the language has
-  a dedicated tool for this, use it; otherwise it's a small generated
-  check, and part of the harness.
+- An existing tool, not a custom check: token or AST clone detectors
+  (e.g. PMD CPD, jscpd), the same tools DECOMPOSITION.txt uses against
+  branches special-cased to tests. They catch copied code and copied
+  type declarations alike. Their minimum size (tokens or lines) keeps
+  small look-alikes like {x, y} or {id, name} from being reported;
+  set it where real duplicates start, not lower.
+- Where the language has a lint for the same name declared in several
+  modules, turn it on too. Where nothing exists, don't write one: the
+  clone detector, the unused-code tools below and the search-first
+  rule in AGENTS.md carry it.
 - Unused exports and dependencies (e.g. knip for TS, vulture for
   Python): a re-declaration often leaves the original unused, so dead
   code is a second signal pointing at the same duplicate.

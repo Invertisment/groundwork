@@ -35,9 +35,11 @@ FORMATTING:
 - One formatter, shared by the human's editor and the build, so
   neither keeps undoing the other. Before scaffolding, ask the human
   which formatter their editor runs on save. If they don't know or
-  don't mind, use the one the language's standard language server
-  (LSP) formats with. Its settings live in a project file both read,
-  not in either one's personal config.
+  don't mind, use the language's standard formatter that runs both
+  from the command line and in editors (e.g. gofmt, rustfmt, ruff,
+  prettier, the Eclipse formatter that JDTLS also runs). Its settings
+  live in a project file both read, not in either one's personal
+  config.
 - One engine, not several configured alike. Every editor in use and
   the build call the same formatter (as an LSP, a plugin that replaces
   the editor's own formatter, or its command-line tool). Two engines
@@ -74,14 +76,12 @@ FORMATTING:
 - Teams mix editors, and not everyone cares about formatting. The CI
   check is what makes the formatting hold for the people who don't,
   so the ones who do aren't left cleaning up after them.
-- The one command that runs every check formats in place first,
-  repeating until the files stop changing: one pass can leave work for
-  the next, and only a settled file is one the editor's single pass on
-  save leaves alone.
+- The one command that runs every check formats in place first, in
+  one pass.
 - CI never formats. It runs the formatter in check mode (or formats,
-  then fails on any diff). The formatter is pinned to the version the
-  human runs: two versions of one formatter can disagree, and CI would
-  then flag files the editor considers done.
+  then fails on any diff). No version pin is needed: mature
+  formatters rarely change their output, and when an update does, the
+  human reformats once and commits that diff on its own.
 - Anything that quotes code (mutation markers, snippets in docs)
   quotes it as formatted.
 
@@ -95,25 +95,14 @@ COMMENTS:
   E.g. "collect garbage now: Lua shares the radio's heap".
 - At most one sentence on a function: that's as much as a reader takes
   in before going back to the code. What needs more goes elsewhere and
-  the sentence points there.
-- A function that needs two sentences to explain probably does two
-  things. In core that forces a split (see DECOMPOSITION.txt): core
-  code describes itself, and splitting it is cheap, since pure
-  functions compose with nothing to pass around but values. The only
-  other way past it is a marker with a reason, counted like
-  suppressions (see VERIFICATION.txt ESCAPE HATCHES). Outside core
-  it's a candidate, not a trigger: comments there often explain the
-  outside world (a device quirk, a protocol), which splitting doesn't
-  remove.
-- Deleting the comment also gets past it, and no check can stop that.
-  If the function reads fine without it, nothing was lost; if not,
-  that's for review (the weakest tier, see VERIFICATION.txt).
-- A contract that needs more (an infra operation's idempotency,
-  failure modes and compensation, see INFRA_LAYER.txt CONTRACT
-  REQUIREMENT, or a format another module depends on) goes in a test
-  or a type first: a contract in a test fails when it's broken, one in
-  a comment doesn't. What can't be tested goes in a doc the sentence
-  links.
+  the sentence points there. A function that needs two sentences to
+  explain probably does two things.
+- How strictly that holds, and what else a comment may carry, depends
+  on the layer: each layer file has its own COMMENTS section. Where a
+  layer says nothing, the sentence limit is a budget (see CHECKS).
+- A contract (an operation's failure modes, a format another module
+  depends on) goes in a test or a type first: a contract in a test
+  fails when it's broken, one in a comment doesn't.
 - Never a restatement of the code, a changelog, or the story of how
   the code got this way. That's what the commit message is for.
 
@@ -131,11 +120,14 @@ ONE HOME FOR EACH KIND OF TEXT:
   case is an "architecture overview" that narrates each module.
 
 DIAGRAMS:
-- Mermaid, in a fenced ```mermaid block in the Markdown that needs it.
-  It's text, so it diffs and reviews like code, and every place a
-  human reads it renders it: GitHub and GitLab, IntelliJ (its
-  Markdown preview), VS Code (with an extension), Neovim and Emacs
-  (mermaid-cli, `mmdc`, which mermaid-mode calls in Emacs).
+- A diagram is text in a format every place the team reads renders.
+  Mermaid, in a fenced ```mermaid block in the Markdown that needs it,
+  is a sensible default: it diffs and reviews like code, and GitHub,
+  GitLab, IntelliJ's Markdown preview and VS Code (with an extension)
+  render it in place. Neovim and Emacs render it through mermaid-cli
+  (`mmdc`). Another text format (PlantUML, D2, Graphviz) works by the
+  same reasoning where the team's viewers render it; the choice goes
+  in GROUNDWORK.md.
 - No committed images of diagrams. An image drifts from its source and
   can't be diffed; a diagram that only one editor renders is one only
   its users can read.
@@ -144,7 +136,7 @@ DIAGRAMS:
   by the check command, or not drawn.
 
 README:
-- The README is for humans. Each root file has one reader:
+- The README is for humans. Each root file has a main reader:
   - README: a human orienting themselves, or installing and using it.
   - AGENTS.md: agents (their tools load it on their own; they don't
     load the README).
@@ -176,10 +168,12 @@ CHECKS (mechanical):
 - Values: a doc names a constant rather than repeating its value
   ("`max_files` in the config", not "10"). Where a doc must state the
   value (a README telling users what they'll see), a check compares it
-  with the code.
+  with the code. GROUNDWORK.md is a doc too: a number a check holds (a
+  budget, a cap) lives in that check's config, and GROUNDWORK.md
+  records why it was chosen and names where it lives.
 - Budgets: the README at most N lines, a comment block at most M
   lines, comments at most a ratio R of a file's lines. The project
-  picks N, M and R and records them in GROUNDWORK.md. Going over one
+  picks N, M and R in the check's config. Going over one
   takes a marker with a reason, counted like suppressions (see
   VERIFICATION.txt ESCAPE HATCHES), and raising a budget is a diff
   someone sees. Crude on purpose: it doesn't judge which lines are
@@ -191,9 +185,9 @@ CHECKS (mechanical):
   renamed and deleted things, not wrong meaning.
 - Sentences: a function's comment is at most one sentence of at most
   W words (see COMMENTS); the word cap keeps two sentences from being
-  joined into one. The project picks W and records it in GROUNDWORK.md.
-  Over either in core fails the check; elsewhere it's a budget, with a
-  marker to go over it like the others.
+  joined into one. The project picks W in the check's config. Each
+  layer file says whether going over fails or is a budget with a
+  marker.
 - Code in docs is checked, so examples live in doc files shaped for a
   human (one guide may span several packages), not in long comments.
   Either the check command runs a doc's code blocks, or it copies them
@@ -223,11 +217,13 @@ EDGE CASES:
   covers and what it leaves out; that's the highest-stakes read in
   the suite (see VERIFICATION.txt).
 - A library's public API, used by people who won't read its source:
-  a doc comment per public function is part of the interface, and the
-  one-sentence limit doesn't hold there. A parameter tag (Javadoc's
-  @param and the like) only where the name and type don't already say
-  it, one sentence each; usage, examples and background go in the
-  library's docs, linked. The reference check and the budget still
-  apply, and the docs are preferably generated from those comments.
+  a doc comment per public function is part of the interface. It's
+  still one sentence for what the function does, plus parameter tags
+  (Javadoc's @param and the like) for all its parameters or none, one
+  sentence each. Tags are mostly worth it on the main interfaces and
+  classes, where a name and a type can't say how to use it. Usage,
+  examples and background go in the library's docs, linked. The
+  reference check and the budget still apply, and the docs are
+  preferably generated from those comments.
 - Files written for agents (AGENTS.md, CLAUDE.md) are pointers, not
   copies, and the same budget applies to them.

@@ -15,10 +15,10 @@ TRIGGER: EMPIRICAL, NOT ESTIMATED:
   "Too big" is something the attempt reveals, not something guessed
   before trying.
 - One more observed trigger, in core only: a function whose comment
-  needs more than one sentence (see HUMAN_READING.txt COMMENTS). Like
+  needs more than one sentence (see FUNCTIONAL_CORE.txt COMMENTS). Like
   the others it's read off code that exists, not estimated from a
-  description, and it goes to DECOMPOSE unless a marker with a reason
-  says the function does one thing.
+  description, and it goes to DECOMPOSE. No marker gets past it; only
+  GROUNDWORK.md can relax it, for the project or a named module.
 
 THE BOUNDED LOOP (process):
 - Contract before implementation: a signature stub (a throwing

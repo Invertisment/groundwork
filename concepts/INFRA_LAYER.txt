@@ -22,12 +22,32 @@ BELONGS HERE:
 - File I/O, system clock reads, random generation.
 
 CONTRACT REQUIREMENT:
-- Each infra operation should declare (even informally, e.g. a comment
-  or annotation) whether it's idempotent, what its failure modes are, and
-  what — if anything — undoes it (a compensating action).
+- Each infra operation declares whether it's idempotent, what its
+  failure modes are, and what — if anything — undoes it (a
+  compensating action).
 - This metadata is what the saga/composition layer consumes; without it,
   glue code has to go read infra internals to know how to sequence
   things safely.
+- Checked before written: failure modes as a closed error or result
+  type, idempotency and compensation as contract tests run against the
+  real thing and every fake (see TESTING), or an annotation a check
+  reads.
+- What can't be checked goes in the operation's doc comment in a fixed
+  shape, one line per item, so the reader finds the same things in the
+  same place on every operation:
+    idempotent: yes, keyed by the order id
+    fails: timeout (retry), not found (don't retry)
+    undo: cancel_order
+  The one-sentence limit doesn't apply to these lines. A line that
+  needs a paragraph is a contract to move into a test.
+
+COMMENTS:
+- Besides the contract lines, one sentence on what the outside world
+  does that the code can't show: a device quirk, a protocol's rule, a
+  firmware version that lacks a call. Splitting the function doesn't
+  remove that kind of explanation, so the limit is a budget with a
+  marker to go over it (see HUMAN_READING.txt CHECKS), not a trigger
+  to split.
 
 CONTRACT IS NOT THE SAME THING AS "INTERFACE":
 - "Contract" here means a named, checkable seam separate from any one
