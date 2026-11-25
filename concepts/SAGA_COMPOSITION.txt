@@ -1,5 +1,12 @@
 SAGA / TRANSACTION COMPOSITION
 
+CROSS-CUTTING NOTE:
+- Not a layer. A saga's decisions are core (see FUNCTIONAL_CORE.txt):
+  a pure decider over the saga's recorded state. Around it are a
+  generic runner in glue and the infra that stores the state and
+  performs the steps. It adds no import rule of its own, so it gets no
+  directory (see BOUNDARIES.txt ADDING A LAYER).
+
 PROPERTY TEST:
 - A saga exists exactly when a crash between steps would lose or
   orphan something. Its job is to make that loss visible and
@@ -7,13 +14,20 @@ PROPERTY TEST:
 - Coordinates two or more independently-owned mutable resources within
   one logical operation, where no single atomic transaction can span
   all of them.
+- Every decision (next step, retry, compensate, done) is a pure
+  function of the saga's recorded state, and that state is durably
+  saved before any step it decides runs.
 
 WHY:
-- This is real business logic (sequencing, retry-vs-compensate
-  decisions), not "just glue." Treating it as boilerplate is where
-  sagas actually break in practice — not in the individual steps, but
-  in someone assuming the orchestration didn't need the same rigor as
-  the core.
+- Sequencing and retry-vs-compensate decisions are real business
+  logic, not "just glue." Sagas break in practice not in the
+  individual steps, but in orchestration someone assumed didn't need
+  the same rigor as the core.
+- As a pure decider, the orchestration gets that rigor: a failed step
+  is just an input, so every failure combination can be generated and
+  tested with plain data and no fakes. What can't be tested that way
+  is the runner, and it's generic: written and tested once per
+  project, not once per saga.
 
 MAY NOT EXIST:
 - Many operations are single-resource — no saga needed at all.
@@ -23,8 +37,8 @@ MAY NOT EXIST:
   externally-owned flag).
 - Check "does this touch more than one independently-owned resource,
   and is staleness actually unacceptable" before reaching for saga
-  machinery. If either answer is no, this layer collapses away — see
-  the single-writer / single-resource case (e.g. a game loop with one
+  machinery. If either answer is no, there's no saga — see the
+  single-writer / single-resource case (e.g. a game loop with one
   piece of in-memory state, or the QR scanner app with no DB).
 
 DISTINGUISHING FROM A PLAIN CONTROLLER:
@@ -36,39 +50,105 @@ DISTINGUISHING FROM A PLAIN CONTROLLER:
   the process dies mid-operation, with nothing for a human or an agent
   to diagnose from.
 
-BELONGS HERE:
-- Do/compensate pairs per step.
-- Retry-vs-rollback decisions (prefer retrying an idempotent pending
-  step over rolling back an already-succeeded one, when possible).
-- Ordering preconditions between steps.
-- Durable intent/progress logging — even a minimal "pending" status
-  record is enough to turn silent failure into visible, recoverable
-  failure.
+TWO KINDS:
+- Coordinated (orchestration): one saga record and one decider own the
+  whole operation and issue every step. The default: the operation's
+  progress is in one place, which is what makes a crash diagnosable.
+- Uncoordinated (choreography): no central record. Each participant
+  has its own decider: an event in, its local state and outgoing
+  events out. Progress is spread across participants, linked by a
+  correlation id, so the trail exists per participant only. Chosen
+  when the participants can't share an orchestrator (separate owners,
+  separate deployments), and recorded in GROUNDWORK.md.
+
+THE DECIDER (core):
+- decide(state, result) -> (new state, commands), or
+  next_action(record) -> command | done when the runner writes each
+  result into the record itself. The spelling is per language, as for
+  transitions (see GLUE.txt TRANSITIONS ARE NOT THE SAME THING AS
+  "REDUCER").
+- Commands and results are closed sets. Results mirror each infra
+  operation's declared failure modes (see INFRA_LAYER.txt CONTRACT
+  REQUIREMENT): a timeout and a rejection are different results, and
+  the decider handles each.
+- A step whose outcome is unknown (timed out, interrupted mid-call) is
+  a state of its own, neither success nor failure: the decider retries
+  it, since it's idempotent, or asks for its status.
+- Belongs here: do/compensate pairs per step; retry-vs-rollback
+  decisions (prefer retrying an idempotent pending step over rolling
+  back an already-succeeded one, when possible); ordering
+  preconditions between steps.
+- The pivot is the step past which the saga only moves forward. Every
+  step before it has a compensation; from it on the decider only
+  retries forward. A step with no compensation can only be the pivot
+  or come after it.
+- In choreography, each participant's decider follows the same rules
+  over its own state.
+
+STATE STORAGE (infra, the project's choice):
+- State-stored, the default: one durable record per saga (its id, each
+  step's status, whether the pivot is passed). Simplest to query
+  ("every saga stuck at payment").
+- Event-sourced: results are stored as events and the state is a fold
+  over them, evolve(state, event) -> state, in core next to the
+  decider. Same pure functions as state-stored. Chosen only when the
+  history itself is a requirement (audit, replaying the business
+  process), since it costs event schema versioning, snapshots for long
+  histories and harder queries; recorded in GROUNDWORK.md with that
+  reason.
+- A durable workflow engine (e.g. Temporal, Restate, AWS Step
+  Functions): the saga is written as sequential code that the engine
+  replays after a crash, which requires the workflow body to be
+  deterministic — core's purity rule. The body is the decider, its
+  activities are infra, and the engine is the runner, replacing the
+  hand-written one (see REUSE.txt: a library before the project's own
+  harness).
+- Whichever it is, the saved state's format is a contract a later run
+  depends on (recovery after a crash), so a test holds it: write it,
+  read it back, resume.
+
+THE RUNNER (glue):
+- One generic loop, no domain branching: load the saga state, call the
+  decider, save the new state with its commands marked pending, then
+  execute the commands through infra and feed each result back in.
+  Mapping a command to its infra call is a dispatch, not a decision.
+- Save before execute. A crash after a call but before its result is
+  saved runs that step again on resume, so every step and every
+  compensation is idempotent (see INFRA_LAYER.txt CONTRACT
+  REQUIREMENT).
+- In choreography, a participant's state change and its outgoing
+  events are saved in one transaction in its own store (a
+  transactional outbox, infra), and a relay publishes them afterwards.
+  The relay can publish an event twice, so consumers deduplicate by
+  event id.
 
 COMMENTS:
-- The steps, their compensations and the progress record are code and
-  tests, not prose. One sentence says why the steps run in this order
-  when nothing in the data forces it.
-- The progress record's format is a contract a later run depends on
-  (recovery after a crash), so a test holds it: write it, read it
-  back, resume. Otherwise the sentence limit is a budget, with a
-  marker to go over it (see HUMAN_READING.txt CHECKS).
+- The decider is core, so core's comment rules hold (see
+  FUNCTIONAL_CORE.txt COMMENTS). The steps, their compensations and
+  the record are code and tests, not prose; its one sentence says why
+  the steps run in this order when nothing in the data forces it.
 
 TESTING:
-- With fakes of the underlying infra — but only fakes that have been
-  contract-verified for parity against the real infra (see
-  INFRA_LAYER.txt). Never hand-written fakes that were never checked.
-- Sequencing/compensation logic gets its own tests (e.g. "does the saga
-  correctly compensate when step 2 fails after step 1 succeeded?").
-- Property-based/generative testing is a particularly strong fit here —
-  arguably stronger than for typical infra. Generate the failure
-  point (which step fails), the retry count, and the ordering, then
-  assert invariants hold regardless: "no orphaned resource no matter
-  which step fails," "replaying a step twice is safe if it's declared
-  idempotent," "compensation always leaves the system in a consistent
-  state." The failure-mode space here is combinatorial (which step
-  fails x in what order x how many retries) and easy to under-enumerate
-  by hand as individual examples; a generator covers combinations a
-  human wouldn't think to write down. See DECOMPOSITION.txt for why
-  this also guards against an implementer special-casing one specific
-  failure sequence instead of handling the general case.
+- The decider is tested like any core: plain data, no fakes.
+  Property-based tests are the strongest fit. Generate the failing
+  step, timeouts versus rejections, duplicated results and restarts
+  (resuming from state saved mid-saga), and assert invariants hold
+  regardless: nothing is left reserved or authorized once the saga
+  ends, nothing is compensated after the pivot, every step completed
+  before a failure is compensated exactly once, and replaying a result
+  changes nothing. The failure space is combinatorial and easy to
+  under-enumerate by hand; a generator covers combinations a human
+  wouldn't write down. See DECOMPOSITION.txt for why this also guards
+  against special-casing one failure sequence.
+- Choreography: wire the participants' deciders together in memory,
+  generate deliveries reordered, duplicated and delayed, and assert the
+  same invariants over their combined state.
+- The runner: a crash-injection test, once per runner, not per saga.
+  Stop it at each point (before saving, after saving but before the
+  call, after the call but before its result is saved), resume, and
+  assert every step ran and the saved state matches. It runs
+  synthetic commands, not the project's sagas. With a workflow engine,
+  the engine's guarantees stand in for it.
+- Saga logic needs no infra fakes. Where an end-to-end test runs a
+  saga against fakes, they're contract-verified (see INFRA_LAYER.txt
+  TESTING).

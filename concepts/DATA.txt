@@ -3,8 +3,8 @@ DATA (reference data and static config)
 PROPERTY TEST:
 - Plain values versioned with the code: no I/O, nothing read at
   runtime, no logic beyond deriving one value from another.
-- Imported only by glue and by other data modules. Core, infra and
-  saga never import it; they receive it as a parameter.
+- Imported only by glue and by other data modules. Core and infra
+  never import it; they receive it as a parameter.
 
 WHY:
 - A table imported straight into logic binds that logic to the one
@@ -50,7 +50,7 @@ DOES NOT BELONG HERE:
 IMPORT DIRECTION:
 - Data may import core (shapes, core functions to derive values, and
   core logic in its scenario tests) and data.
-- Glue may import data; core, infra and saga may not.
+- Glue may import data; core and infra may not.
 - Same purity rule as core: no I/O or framework packages.
 
 COMMENTS:

@@ -109,8 +109,9 @@ FORCED CUTS:
   unit that loads is the source module), the split follows the
   envelope and its bullet says so.
 - Mirroring, sharding and replication are the large-system form of the
-  same thing. Keeping the copies consistent is saga or reconciliation
-  (see SAGA_COMPOSITION.txt), not glue.
+  same thing. Keeping the copies consistent is a saga or
+  reconciliation (see SAGA_COMPOSITION.txt), not ad-hoc calls in
+  glue.
 
 DESIGN CONSEQUENCES (common ones, not a checklist):
 - Stream or page instead of loading whole. Keep only the N needed

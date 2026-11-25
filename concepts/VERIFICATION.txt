@@ -125,7 +125,7 @@ MUTANT SOURCES (strongest -> weakest):
    on every line it covers; nobody picks.
 2. A small generated mutator, where no tool fits the language or the
    build. A script applies a fixed set of operators to every place
-   they match in core and saga files: flip a comparison (< to <=, ==
+   they match in core files: flip a comparison (< to <=, ==
    to ~=), swap and/or, drop a not, add or subtract one from a number
    or an index, return the input or an empty value instead. Nobody
    picks here either; it's tier 1 with fewer operators. It's part of
@@ -154,9 +154,10 @@ EQUIVALENT MUTANTS:
 
 MUTATION COST:
 - A run repeats the suite once per mutant, so aim it at code with real
-  logic (core, saga), not glue. Generated mutants can be limited to
-  the lines a change touched, which keeps a per-change run cheap; the
-  full run can be less frequent (nightly, before a release).
+  logic (core, saga deciders included), not glue. Generated mutants
+  can be limited to the lines a change touched, which keeps a
+  per-change run cheap; the full run can be less frequent (nightly,
+  before a release).
 - A rising survival rate is the signal to read, like a rising
   suppression count below.
 

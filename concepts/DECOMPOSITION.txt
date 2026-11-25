@@ -4,7 +4,7 @@ CROSS-CUTTING NOTE:
 - This is not a layer, it's the decision process for whether a unit
   of work (a function, a component) in any layer should be implemented
   directly or split into sub-units first. It governs how an agent works
-  within FUNCTIONAL_CORE, INFRA_LAYER, and SAGA_COMPOSITION.
+  within FUNCTIONAL_CORE (saga deciders included) and INFRA_LAYER.
 
 TRIGGER: EMPIRICAL, NOT ESTIMATED:
 - Do not decide a unit is "too big" in advance from its description,
@@ -91,7 +91,7 @@ STRONGER FIX, NOT JUST DETECTION: GENERATIVE/PROPERTY-BASED TESTING:
   generator produces x=6 — no separate detector needed, the test
   suite itself can't be gamed by enumeration.
 - Wherever a unit's requirement can be expressed as a property instead
-  of (or alongside) example cases, prefer it. See the per-layer notes
+  of (or alongside) example cases, prefer it. See the notes
   in FUNCTIONAL_CORE.txt and SAGA_COMPOSITION.txt for where this
   applies most directly.
 - Where a requirement can't be reduced to a clean property, keep

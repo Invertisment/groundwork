@@ -17,6 +17,8 @@ BELONGS HERE:
 - Business rules and calculations (pay calculation, eligibility checks).
 - Parsing and validation of already-fetched data.
 - State-transition / reducer functions: reduce(state, event) -> newState.
+- Saga deciders: the next step or compensation from a saga's recorded
+  state (see SAGA_COMPOSITION.txt).
 - Derivations/projections over a list of facts (e.g. coverageGaps(events, rules)).
 - Pure UI-state-to-tree functions (e.g. a Compose composable that only reads
   from arguments passed in and returns a tree — no framework state reads).
@@ -48,7 +50,7 @@ EDGE CASES:
   inversion, see GLUE.txt COMPOSITION ROOT), but doesn't call it. A
   core function that calls a port can only be tested against a fake,
   and the test then checks how the fake was used, not what was
-  decided: at best a smoke test. Glue or saga makes the call and
+  decided: at best a smoke test. Glue makes the call and
   passes core the result as plain data.
 
 COMMENTS:

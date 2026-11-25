@@ -2,8 +2,8 @@ BOUNDARIES (package/module cuts)
 
 CROSS-CUTTING NOTE:
 - This concept doesn't name another layer — it's about where the seams
-  go *within and between* the five layers (FUNCTIONAL_CORE, DATA,
-  INFRA_LAYER, SAGA_COMPOSITION, GLUE). Each of those layers still
+  go *within and between* the four layers (FUNCTIONAL_CORE, DATA,
+  INFRA_LAYER, GLUE). Each of those layers still
   needs to be cut into modules/packages, and this file is about how.
 
 PROPERTY TEST:
@@ -27,9 +27,8 @@ WHY:
 
 HOW IT'S ENFORCED (mechanical, once drawn):
 - Dependency-direction / import-direction checks: core cannot import
-  data, infra or saga packages; data imports only core and data;
-  infra and saga cannot import data; infra cannot import saga
-  internals; glue can import everything.
+  data or infra packages; data imports only core and data; infra
+  cannot import data; glue can import everything.
 - Purity checks on core and data: ban imports of DB drivers, HTTP
   clients, filesystem, clock, random, and framework types from core and
   data packages.
@@ -44,8 +43,8 @@ LAYER SHOULD BE THE BOTTOM-LEVEL CUT:
   (`payments/`, `notifications/`, `camera/`, nested as deep as needed).
   The layer is the innermost directory that holds source files:
   `src/payments/ledger/core/`, `src/payments/ledger/infra/`,
-  `src/payments/ledger/glue/` (plus `saga/` and `data/` where those
-  layers exist).
+  `src/payments/ledger/glue/` (plus `data/` where that layer
+  exists).
 - Not layer-first (`src/core/payments/`, `src/infra/payments/`): that
   scatters one component — and the business invariant it protects —
   across several distant trees, working against the invariant-based

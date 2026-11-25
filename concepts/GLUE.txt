@@ -7,7 +7,7 @@ PROPERTY TEST:
 WHY:
 - This layer is safe to leave lightly tested — but only as long as it
   stays genuinely dumb. The moment it grows a branch on domain state,
-  it has quietly become saga or core logic wearing glue's name, and
+  it has quietly become core logic wearing glue's name, and
   needs to be tested and reasoned about as such.
 
 BELONGS HERE:
@@ -19,23 +19,26 @@ BELONGS HERE:
   data layer (see DATA.txt) to the code that takes it as a parameter.
 - Framework-mandated entry points: main(), an HTTP server bootstrap,
   an Android Activity/Service/InputMethodService registration.
+- A saga runner: the generic loop that loads a saga's state, calls its
+  decider in core and carries out the commands (see SAGA_COMPOSITION.txt
+  THE RUNNER).
 
 COMPOSITION ROOT (DI without a framework):
-- "Core/saga never imports infra" does not require a DI framework —
+- "Core never imports infra" does not require a DI framework —
   it requires that only one place in the codebase ever references both
   a contract and its concrete implementation together, and that place
   is glue. Without Spring/Dagger/etc., that means constructing the
-  concrete infra by hand in main and passing it into whatever core/
-  saga code needs it (e.g. via constructor), instead of autowiring —
+  concrete infra by hand in main and passing it into the handlers and
+  runners that call it (e.g. via constructor), instead of autowiring —
   same rule, same guarantee, no framework required.
 - The principle underneath is dependency inversion (the D in SOLID):
   the contract is declared by the side that needs it, in its own terms
-  (core or saga), and infra implements it. The import points from infra
+  (core), and infra implements it. The import points from infra
   to the contract, against the direction of the call, so the
   import-direction check holds (see BOUNDARIES.txt). Glue is the one
   place that sees both sides and connects them.
 - Core may declare a contract but never calls one (see
-  FUNCTIONAL_CORE.txt EDGE CASES). Glue or saga calls it, hands core
+  FUNCTIONAL_CORE.txt EDGE CASES). Glue calls it, hands core
   the result as plain data, and carries out the plain value core
   returns.
 - This is a named pattern (Mark Seemann's "composition root"): the one
@@ -49,18 +52,18 @@ MULTIPLE INSTANCES ALLOWED:
   main() — e.g. Android's InputMethodService plus a share-target
   Activity. Each one stays glue as long as none of them decide
   anything; if one starts branching on domain state, that logic
-  belongs in the saga or core layer instead, called from the entry
+  belongs in core instead, called from the entry
   point, not inlined into it.
 
 DOES NOT BELONG HERE:
 - Any conditional that depends on domain/business state.
 - Any compensation, or any retry/ordering decision across
-  independently-owned resources (that's saga layer).
-- Exception: where the saga layer collapses away (see "MAY NOT EXIST"
-  in SAGA_COMPOSITION.txt), plain retry/ordering of calls may sit here
+  independently-owned resources (that's a saga's decider, in core, see
+  SAGA_COMPOSITION.txt).
+- Exception: plain retry/ordering of calls to one resource may sit here
   instead of in infra — as long as it doesn't branch on domain state.
-  Once it does, or once a second resource joins the operation, it has
-  outgrown glue.
+  Once it does, it moves to core; once a second independently-owned
+  resource joins the operation, it's a saga.
 - Any calculation or derivation (that's core layer).
 
 PROPORTIONALITY (not literally zero conditionals):
@@ -154,6 +157,9 @@ COMMENTS:
 
 TESTING:
 - Smoke-level only: does the app start and wire correctly.
+- One exception: a saga runner gets a crash-injection test, since
+  saving before executing is what recovery depends on (see
+  SAGA_COMPOSITION.txt TESTING). It tests the loop, not domain logic.
 - Wanting a real logic test here is a signal the code doesn't belong
   in this layer — move it, don't just add the test. For UI state, the
   usual destination is a transition in core (see above).
