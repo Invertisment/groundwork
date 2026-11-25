@@ -4,7 +4,7 @@ This repo is not an application — it's a reusable, language-agnostic architect
 
 ## What's here
 
-- `concepts/` — the concept directory: one file per layer or cross-cutting rule, each defining it by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance. Read all of them before scaffolding.
+- `concepts/` — the concept directory: one file per layer or cross-cutting rule, each defining it by a property test (never by example list, never by LOC/file size), with a WHY, what belongs, edge cases, and testing guidance. Read all of them before scaffolding. They're dense on purpose: written for agents, every line a rule. Humans review them, but a skimming human isn't the reader, so don't pad, summarize or restructure them for one.
 - `RAW_MESSAGES.txt` — the original raw conversation this guideline was distilled from. Historical source material, not authoritative: if it ever conflicts with `concepts/`, `concepts/` wins.
 - `README.md` — one-paragraph orientation for humans.
 
