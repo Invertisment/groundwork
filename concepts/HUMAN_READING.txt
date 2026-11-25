@@ -111,6 +111,19 @@ ONE HOME FOR EACH KIND OF TEXT:
 - Text that fits none of these probably shouldn't exist. The usual
   case is an "architecture overview" that narrates each module.
 
+DIAGRAMS:
+- Mermaid, in a fenced ```mermaid block in the Markdown that needs it.
+  It's text, so it diffs and reviews like code, and every place a
+  human reads it renders it: GitHub and GitLab, IntelliJ (its
+  Markdown preview), VS Code (with an extension), Neovim and Emacs
+  (mermaid-cli, `mmdc`, which mermaid-mode calls in Emacs).
+- No committed images of diagrams. An image drifts from its source and
+  can't be diffed; a diagram that only one editor renders is one only
+  its users can read.
+- The rest of this file holds for diagrams too: one that's derivable
+  from the code (the module graph, the import directions) is generated
+  by the check command, or not drawn.
+
 README:
 - The README is for humans. Each root file has one reader:
   - README: a human orienting themselves, or installing and using it.
