@@ -103,6 +103,11 @@ COMMENTS:
 - A contract (an operation's failure modes, a format another module
   depends on) goes in a test or a type first: a contract in a test
   fails when it's broken, one in a comment doesn't.
+- A workaround for a known bug (in a library, the platform, a device)
+  gets a regression test holding the input that triggers it, and its
+  comment is one sentence naming that test. The story of finding the
+  bug goes in the commit message. This holds on any declaration, not
+  only functions.
 - Never a restatement of the code, a changelog, or the story of how
   the code got this way. That's what the commit message is for.
 

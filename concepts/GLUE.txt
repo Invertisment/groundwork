@@ -157,6 +157,14 @@ COMMENTS:
 
 TESTING:
 - Smoke-level only: does the app start and wire correctly.
+- Where entry points only start on a device or emulator (Android,
+  iOS), the smoke test launches there every entry point the platform's
+  manifest declares. That's end-to-end cost, so it runs before a
+  release, and in CI only where CI can run an emulator; not in the
+  per-change check command. Launching works on an emulator; it's
+  interactive testing that emulators serve badly (see INFRA_LAYER.txt
+  TESTING). An entry point the user has to enable first (an input
+  method) is covered by what it inflates or binds, or is a known gap.
 - One exception: a saga runner gets a crash-injection test, since
   saving before executing is what recovery depends on (see
   SAGA_COMPOSITION.txt TESTING). It tests the loop, not domain logic.

@@ -117,6 +117,14 @@ KEEP IT THIN (humble object):
   functions has the same problems as a LOC cap (see DECOMPOSITION.txt).
   The review question is "does this branch decide something about the
   data it received, and could it live in core instead?"
+- Nor a placement check. "Every infra file imports something impure"
+  would catch logic moved into infra wholesale, but it requires an
+  import, and import linters express forbidden imports (see
+  BOUNDARIES.txt HOW IT'S ENFORCED). It would be custom harness in
+  nearly every language (see REUSE.txt), and it only catches the
+  extreme case: a file with one I/O call and a pile of logic passes it.
+  Review carries this, an LLM critic's included, as suggestions rather
+  than evidence (see VERIFICATION.txt).
 
 TESTING:
 - Not forced. Whether the real thing is up, reachable, or behaves on a

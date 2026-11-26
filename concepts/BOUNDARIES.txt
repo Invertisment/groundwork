@@ -26,13 +26,26 @@ WHY:
   tooling; the first cut cannot.
 
 HOW IT'S ENFORCED (mechanical, once drawn):
-- Dependency-direction / import-direction checks: core cannot import
-  data or infra packages; data imports only core and data; infra
-  cannot import data; glue can import everything.
-- Purity checks on core and data: ban imports of DB drivers, HTTP
-  clients, filesystem, clock, random, and framework types from core and
-  data packages.
+- An allow list per layer: the layers its files may import. Anything
+  not listed fails, so a layer added later starts with nothing allowed
+  until its row is written.
+    core:  core
+    data:  core, data
+    infra: core, infra
+    glue:  every layer
+  The rows hold across components: `a/core` may import `b/core`, never
+  `b/infra`.
+- Purity, for core and data: an allow list of the libraries they may
+  import, the standard library's pure packages and each pure library
+  (see REUSE.txt LIBRARIES IN THE LAYERS), so adding one is a diff
+  someone reviews. A ban list (DB drivers, HTTP clients, filesystem,
+  clock, random, framework types) only catches what someone thought to
+  ban.
 - Circular-import detection.
+- The allow lists check direction, not placement: logic in the wrong
+  layer passes as long as its imports are allowed. Placement stays
+  with review (see INFRA_LAYER.txt KEEP IT THIN, GLUE.txt
+  PROPORTIONALITY).
 - These are plain CI checks (e.g. an import-linter / dependency-graph
   tool for whatever language the project uses) — the concrete tool
   is a per-project verification predicate, not defined in this file.
@@ -54,12 +67,10 @@ LAYER SHOULD BE THE BOTTOM-LEVEL CUT:
 - Not a flat layout with no layer directories at all: a linter has no
   way to know which layer a file belongs to unless that's encoded in
   the path itself.
-- The import-direction check stays generic by matching the layer
-  segment of the path rather than a fixed prefix: "nothing under
-  `**/core/**` imports from `**/infra/**` or `**/glue/**`" covers
-  every component added later, in any component, with no update to the
-  check itself. The same rule holds across components (`a/core` may
-  not import `b/infra` either).
+- The allow list stays generic by matching the layer segment of the
+  path rather than a fixed prefix: "files under `**/core/**` import
+  only from `**/core/**`" covers every component added later, with no
+  update to the check itself.
 - Required companion checks, since the path is now the only thing
   declaring a file's layer:
   - Every source file sits under exactly one layer directory; a source
