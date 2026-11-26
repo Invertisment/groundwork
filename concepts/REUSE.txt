@@ -98,6 +98,15 @@ DETECTING DUPLICATES (mechanical):
   changed, which a token match misses. The look-alikes they do find
   are mostly ones a human would leave as they are, so the check turns
   into noise everyone learns to skip.
+- The exception is a check that ignores names, since it catches a
+  helper re-typed under new ones. Java and C++: PMD CPD with
+  --ignore-identifiers and --ignore-literals, run by the build's PMD
+  plugin, inside the JVM the build already starts. Lua: compare each
+  function's opcodes from luac's listing, operands left out; luac
+  drops local names, so a renamed copy compiles to the same opcodes.
+  A minimum length (around 8 instructions) keeps short getters from
+  matching. Both compare whole functions or token runs, so a copy
+  inside a larger function stays uncaught.
 - Types are the duplicate check for shapes: a shape declared once, and
   every literal of it checked against that declaration by the type
   checker. Where the language has a lint for the same name declared in
